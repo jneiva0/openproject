@@ -49,7 +49,7 @@ module Storages
 
     def call
       with_tagged_logger([self.class.name, "storage-#{@storage.id}"]) do
-        existing_remote_folders = remote_folders_map(@storage.drive_id).on_failure { return @result }.result
+        existing_remote_folders = remote_folders_map(@storage.drive_id).value_or { return @result }
 
         ensure_folders_exist(existing_remote_folders).on_success do
           hide_inactive_folders(existing_remote_folders) if @hide_missing_folders
@@ -72,7 +72,7 @@ module Storages
         rename_project_folder(folder_map[project_storage.project_folder_id], project_storage)
       end
 
-      ServiceResult.success(result: "folders processed")
+      Success(:folder_maintenance_done)
     end
 
     def hide_inactive_folders(folder_map)
@@ -87,10 +87,10 @@ module Storages
       build_permissions_input_data(item_id, [])
         .either(
           ->(input_data) do
-            set_permissions.call(storage: @storage, auth_strategy:, input_data:)
-                           .on_failure do |service_result|
-              log_storage_error(service_result.errors, item_id:, context: "hide_folder")
-              add_error(:hide_inactive_folders, service_result.errors, options: { path: folder_map[item_id] })
+            @commands[:set_permissions].call(auth_strategy:, input_data:)
+                           .value_or do |error|
+              log_adapter_error(error, item_id:, context: "hide_folder")
+              add_error(:hide_inactive_folders, error, options: { path: folder_map[item_id] })
             end
           end,
           ->(failure) { log_validation_error(failure, item_id:, context: "hide_folder") }
@@ -107,23 +107,27 @@ module Storages
 
       info "#{current_folder_name} is misnamed. Renaming to #{actual_path}"
       folder_id = project_storage.project_folder_id
-      rename_file.call(storage: @storage, auth_strategy:, file_id: folder_id, name: actual_path)
-                 .on_failure do |service_result|
-        log_storage_error(service_result.errors, folder_id:, folder_name: actual_path)
 
+      input_data = Adapters::Input::RenameFile.build(location: folder_id, new_name: actual_path).value_or { return Failure(_1) }
+      @commands[:rename_file].call(auth_strategy:, input_data:).value_or do |error|
+        log_adapter_error(error, folder_id:, folder_name: actual_path)
         add_error(
-          :rename_project_folder, service_result.errors,
+          :rename_project_folder, error,
           options: { current_path: current_folder_name, project_folder_name: actual_path, project_folder_id: folder_id }
         )
       end
     end
 
     def create_remote_folder(folder_name, project_storage_id)
-      folder_info = create_folder.call(storage: @storage, auth_strategy:, folder_name:, parent_location: root_folder)
-                                 .on_failure do |service_result|
-        log_storage_error(service_result.errors, folder_name:)
-        return add_error(:create_folder, service_result.errors, options: { folder_name:, parent_location: root_folder })
-      end.result
+      input_data = Adapters::Input::CreateFolder.build(folder_name:, parent_location: "/").value_or do |it|
+        log_validation_error(it, folder_name: folder_name, parent_location: "/")
+        return Failure(it)
+      end
+
+      folder_info = @commands[:create_folder].call(auth_strategy:, input_data:).value_or do |error|
+        log_adapter_error(error, folder_name:)
+        return add_error(:create_folder, error, options: { folder_name:, parent_location: root_folder })
+      end
 
       last_project_folder = ::Storages::LastProjectFolder.find_by(project_storage_id:, mode: :automatic)
 
@@ -143,12 +147,18 @@ module Storages
     def remote_folders_map(drive_id)
       info "Retrieving already existing folders under #{drive_id}"
 
-      file_list = files.call(storage: @storage, auth_strategy:, folder: root_folder).on_failure do |failed|
-        log_storage_error(failed.errors, { drive_id: })
-        return add_error(:remote_folders, failed.errors, options: { drive_id: }).fail!
-      end.result
+      input_data = Adapters::Input::Files.build(folder: "/").value_or do |it|
+        log_validation_error(it, context: "remote_folders")
+        return Failure()
+      end
 
-      ServiceResult.success(result: filter_folders_from(file_list.files))
+      file_list = @commands[:files].call(auth_strategy:, input_data:).value_or do |error|
+        log_adapter_error(error, { drive_id: })
+        add_error(:remote_folders, error, options: { drive_id: }).fail!
+        return Failure()
+      end
+
+      Success(filter_folders_from(file_list.files))
     end
 
     # @param files [Array<Storages::StorageFile>]
@@ -160,7 +170,7 @@ module Storages
         hash[file.id] = file.name
       end
 
-      info "Found #{folders.size} folders. #{folders}"
+      info "Found #{folders.size} folders. Map: #{folders}"
 
       folders
     end
