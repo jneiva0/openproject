@@ -126,7 +126,7 @@ module Storages
 
       folder_info = @commands[:create_folder].call(auth_strategy:, input_data:).value_or do |error|
         log_adapter_error(error, folder_name:)
-        return add_error(:create_folder, error, options: { folder_name:, parent_location: root_folder })
+        return add_error(:create_folder, error, options: { folder_name:, parent_location: "/" })
       end
 
       last_project_folder = ::Storages::LastProjectFolder.find_by(project_storage_id:, mode: :automatic)
