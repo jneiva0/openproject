@@ -186,7 +186,7 @@ module Storages
 
       it "updates the project storage with the remote folder id" do
         expect { service.call }.to change { project_storage.reload.project_folder_id }
-                                              .from(nil).to("normal_project_id")
+                                     .from(nil).to("normal_project_id")
       end
 
       context "when a project is renamed" do

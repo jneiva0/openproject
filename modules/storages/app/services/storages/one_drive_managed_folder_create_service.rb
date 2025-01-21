@@ -154,15 +154,13 @@ module Storages
 
       file_list = @commands[:files].call(auth_strategy:, input_data:).value_or do |error|
         log_adapter_error(error, { drive_id: })
-        add_error(:remote_folders, error, options: { drive_id: }).fail!
+        add_error(:remote_folders, error, options: { drive_id: })
         return Failure()
       end
 
       Success(filter_folders_from(file_list.files))
     end
 
-    # @param files [Array<Storages::StorageFile>]
-    # @return Hash{String => String} a hash of item ID and item name.
     def filter_folders_from(files)
       folders = files.each_with_object({}) do |file, hash|
         next unless file.folder?
@@ -175,22 +173,22 @@ module Storages
       folders
     end
 
-    def root_folder = Peripherals::ParentFolder.new("/")
+    def root_folder = "/"
 
-    def create_folder = Peripherals::Registry.resolve("one_drive.commands.create_folder")
+    def create_folder = Adapters::Registry.resolve("one_drive.commands.create_folder").new(@storage)
 
-    def rename_file = Peripherals::Registry.resolve("one_drive.commands.rename_file")
+    def rename_file = Adapters::Registry.resolve("one_drive.commands.rename_file").new(@storage)
 
-    def set_permissions = Peripherals::Registry.resolve("one_drive.commands.set_permissions")
+    def set_permissions = Adapters::Registry.resolve("one_drive.commands.set_permissions").new(@storage)
 
-    def files = Peripherals::Registry.resolve("one_drive.queries.files")
-
-    def userless = Peripherals::Registry.resolve("one_drive.authentication.userless")
-
-    def auth_strategy = userless.call
+    def files = Adapters::Registry.resolve("one_drive.queries.files").new(@storage)
 
     def build_permissions_input_data(file_id, user_permissions)
       Adapters::Input::SetPermissions.build(file_id:, user_permissions:)
+    end
+
+    def auth_strategy
+      @auth_strategy ||= Adapters::Registry["one_drive.authentication.userless"].call
     end
   end
 end
