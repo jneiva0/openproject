@@ -86,9 +86,9 @@ module Storages
       auth_strategy = Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(user:, storage:)
 
       result = if project_folder_not_accessible?(user)
-                 open_storage_url(auth_strategy)
+                 open_project_storage_url
                else
-                 open_file_link_url(auth_strategy)
+                 open_file_link(auth_strategy)
                end
 
       result.either(->(success) { ServiceResult.success(result: success) },
@@ -100,6 +100,12 @@ module Storages
     end
 
     private
+
+    def open_file_link(auth_strategy)
+      Adapters::Input::OpenFileLink.build(file_id: project_folder_id, open_location: false).bind do |input_data|
+        Adapters::Registry.resolve("#{storage}.queries.open_file_link").call(storage:, auth_strategy:, input_data:)
+      end
+    end
 
     def managed_folder_identifier
       @managed_folder_identifier ||= Adapters::Registry.resolve("#{storage}.models.managed_folder_identifier").new(self)
