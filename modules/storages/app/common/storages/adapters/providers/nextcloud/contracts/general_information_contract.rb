@@ -44,6 +44,17 @@ module Storages
 
             attribute :authentication_method
             validates :authentication_method, presence: true, inclusion: { in: NextcloudStorage::AUTHENTICATION_METHODS }
+
+            validate :require_ee_token_for_sso
+
+            def require_ee_token_for_sso
+              return if EnterpriseToken.allows_to?(:nextcloud_sso)
+              return unless model.authenticate_via_idp?
+              return unless model.authentication_method_changed?
+
+              plan_name = I18n.t("ee.upsell.plan_name", plan: OpenProject::Token.lowest_plan_for(:nextcloud_sso)&.capitalize)
+              errors.add(:authentication_method, :enterprise_plan_required, plan_name:)
+            end
           end
         end
       end
