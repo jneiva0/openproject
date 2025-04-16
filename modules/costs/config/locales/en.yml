@@ -40,6 +40,7 @@ en:
         spent: "Spent"
         spent_on: "Date"
         logged_by: "Logged by"
+        entity: Entity
       cost_type:
         unit: "Unit name"
         unit_plural: "Pluralized unit name"

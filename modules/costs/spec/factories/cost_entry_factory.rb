@@ -30,14 +30,14 @@ FactoryBot.define do
   factory :cost_entry do
     project
     user
-    work_package
+    entity factory: :work_package
     cost_type
     spent_on { Date.today }
     units { 1 }
     comments { "" }
 
     before(:create) do |ce|
-      ce.work_package.project = ce.project
+      ce.project = ce.entity.project
 
       unless ce.project.users.include?(ce.user)
         Members::CreateService

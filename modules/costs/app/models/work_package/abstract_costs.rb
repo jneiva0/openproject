@@ -34,9 +34,11 @@ class WorkPackage
       #   where(work_package: work_packages)
       # However, AR (Rails 4.2) will not expand :includes + :references inside a subquery,
       # which will render the query invalid. Therefore we manually extract the IDs in a separate (pluck) query.
-      wp_ids = work_package_ids work_packages
+      wp_ids = work_package_ids(work_packages)
 
-      filter_authorized(costs_model.where(work_package_id: wp_ids).joins(work_package: :project))
+      scope = costs_model.where(entity_type: "WorkPackage", entity_id: wp_ids).joins(:project)
+
+      filter_authorized(scope)
         .sum(costs_value)
         .to_f
     end
@@ -135,7 +137,7 @@ class WorkPackage
       authorization_scope = filter_authorized costs_model.all
       authorization_where = authorization_scope.arel.ast.cores.last.wheres.last
 
-      ce_table[:work_package_id].eq(wp_table_descendants[:id]).and(authorization_where)
+      ce_table[:entity_type].eq("WorkPackage").and(ce_table[:entity_id].eq(wp_table_descendants[:id]).and(authorization_where))
     end
 
     def projects_table

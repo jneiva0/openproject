@@ -59,7 +59,7 @@ class WorkPackage < ApplicationRecord
   belongs_to :priority, class_name: "IssuePriority"
   belongs_to :category, class_name: "Category", optional: true
 
-  has_many :time_entries, dependent: :delete_all
+  has_many :time_entries, dependent: :delete_all, inverse_of: :entity
 
   has_many :file_links, dependent: :delete_all, class_name: "Storages::FileLink", as: :container
 

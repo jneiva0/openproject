@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #-- copyright
 # OpenProject is an open source project management software.
 # Copyright (C) the OpenProject GmbH
@@ -27,8 +29,12 @@
 #++
 
 class CostEntry < ApplicationRecord
+  ALLOWED_ENTITY_TYPES = %w[WorkPackage].freeze
+
+  self.ignored_columns += %w[work_package_id]
+
   belongs_to :project
-  belongs_to :work_package
+  belongs_to :entity, polymorphic: true
   belongs_to :user
   belongs_to :logged_by, class_name: "User"
   include ::Costs::DeletedUserFallback
@@ -38,7 +44,7 @@ class CostEntry < ApplicationRecord
 
   include ActiveModel::ForbiddenAttributesProtection
 
-  validates_presence_of :work_package_id, :project_id, :user_id, :logged_by_id, :cost_type_id, :units, :spent_on
+  validates_presence_of :entity, :project_id, :user_id, :logged_by_id, :cost_type_id, :units, :spent_on
   validates_numericality_of :units, allow_nil: false, message: :invalid
   validates_length_of :comments, maximum: 255, allow_nil: true
 
@@ -47,7 +53,10 @@ class CostEntry < ApplicationRecord
   after_initialize :after_initialize
   validate :validate
 
-  scope :on_work_packages, ->(work_packages) { where(work_package_id: work_packages) }
+  validates :entity_type,
+            inclusion: { in: ALLOWED_ENTITY_TYPES }
+
+  scope :on_work_packages, ->(work_packages) { where(entity: work_packages) }
 
   extend CostEntryScopes
   include Entry::Costs
@@ -73,7 +82,7 @@ class CostEntry < ApplicationRecord
     errors.add :project_id, :invalid if project.nil?
     errors.add :work_package_id, :invalid if work_package.nil? || (project != work_package.project)
     errors.add :cost_type_id, :invalid if cost_type.present? && cost_type.deleted_at.present?
-    errors.add :user_id, :invalid if project.present? && !project.users.include?(user) && user_id_changed?
+    errors.add :user_id, :invalid if project.present? && project.users.exclude?(user) && user_id_changed?
 
     begin
       spent_on.to_date
@@ -85,6 +94,42 @@ class CostEntry < ApplicationRecord
   def before_save
     self.spent_on &&= spent_on.to_date
     update_costs
+  end
+
+  def work_package
+    OpenProject::Deprecation.replaced(:work_package, :entity, caller_locations)
+
+    if entity_type == "WorkPackage"
+      entity
+    end
+  end
+
+  def work_package_id
+    OpenProject::Deprecation.replaced(:work_package_id, :entity_id, caller_locations)
+
+    if entity_type == "WorkPackage"
+      entity_id
+    end
+  end
+
+  def work_package=(value)
+    OpenProject::Deprecation.replaced(:work_package=, :entity=, caller_locations)
+    self.entity = value
+  end
+
+  def work_package_id=(value)
+    OpenProject::Deprecation.replaced(:work_package_id=, :entity_id=, caller_locations)
+
+    self.entity_type = "WorkPackage"
+    self.entity_id = value
+  end
+
+  def entity=(value)
+    if value.is_a?(String) && value.starts_with?("gid://")
+      super(GlobalID::Locator.locate(value, only: ALLOWED_ENTITY_TYPES.map(&:constantize)))
+    else
+      super
+    end
   end
 
   def overwritten_costs=(costs)
