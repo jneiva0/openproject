@@ -1391,6 +1391,7 @@ DEPENDENCIES
   fog-aws
   friendly_id (~> 5.5.0)
   fuubar (~> 2.5.0)
+  globalid (~> 1.2)
   gon (~> 6.4.0)
   good_job (= 3.99.1)
   google-apis-gmail_v1

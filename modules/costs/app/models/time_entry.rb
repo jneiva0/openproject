@@ -48,7 +48,7 @@ class TimeEntry < ApplicationRecord
 
   acts_as_journalized
 
-  validates :user_id, :project_id, :spent_on,
+  validates :user_id, :project_id, :spent_on, :entity,
             presence: true
 
   validates :hours,
@@ -127,8 +127,16 @@ class TimeEntry < ApplicationRecord
     self.entity = value
   end
 
+  def entity=(value)
+    if value.is_a?(String) && value.starts_with?("gid://")
+      super(GlobalID::Locator.locate(value, only: ALLOWED_ENTITY_TYPES.map(&:constantize)))
+    else
+      super
+    end
+  end
+
   def hours=(value)
-    write_attribute :hours, (value.is_a?(String) ? (value.to_hours || value) : value)
+    super(value.is_a?(String) ? (value.to_hours || value) : value)
   end
 
   def ongoing_hours

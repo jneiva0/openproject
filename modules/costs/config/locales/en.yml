@@ -58,6 +58,7 @@ en:
       time_entry:
         project: Project
         user: User
+        entity: Entity
         work_package: Work package
         subject: Subject
         hours: Hours
