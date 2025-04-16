@@ -29,10 +29,12 @@
 #++
 
 class TimeEntry < ApplicationRecord
+  ALLOWED_ENTITY_TYPES = %w[WorkPackage Meeting].freeze
+
   # could have used polymorphic association
   # project association here allows easy loading of time entries at project level with one database trip
   belongs_to :project
-  belongs_to :work_package
+  belongs_to :entity, polymorphic: true
   belongs_to :user
   belongs_to :activity, class_name: "TimeEntryActivity"
   belongs_to :rate, -> { where(type: %w[HourlyRate DefaultHourlyRate]) }, class_name: "Rate"
@@ -76,7 +78,10 @@ class TimeEntry < ApplicationRecord
             },
             allow_blank: true
 
-  scope :on_work_packages, ->(work_packages) { where(work_package_id: work_packages) }
+  validates :entity_type,
+            inclusion: { in: ALLOWED_ENTITY_TYPES }
+
+  scope :on_work_packages, ->(work_packages) { where(entity: work_packages) }
 
   extend ::TimeEntries::TimeEntryScopes
   include ::Scopes::Scoped
@@ -107,6 +112,19 @@ class TimeEntry < ApplicationRecord
     else
       super
     end
+  end
+
+  def work_package
+    OpenProject::Deprecation.replaced(:work_package, :entity, caller_locations)
+
+    if entity_type == "WorkPackage"
+      entity
+    end
+  end
+
+  def work_package=(value)
+    OpenProject::Deprecation.replaced(:work_package=, :entity=, caller_locations)
+    self.entity = value
   end
 
   def hours=(value)
