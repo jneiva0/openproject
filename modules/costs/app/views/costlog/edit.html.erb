@@ -54,9 +54,9 @@ See COPYRIGHT and LICENSE files for more details.
                      autofocus: true,
                      container_class: "-xslim" %>
 
-    <% if @cost_entry.work_package %>
+    <% if @cost_entry.entity %>
       <div class="form--field-instructions">
-        <%= h(@cost_entry.work_package.to_s) %>
+        <%= h(@cost_entry.entity.to_s) %>
       </div>
     <% end %>
   </div>
