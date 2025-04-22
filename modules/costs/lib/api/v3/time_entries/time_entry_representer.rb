@@ -93,8 +93,9 @@ module API
 
         associated_resource :project
 
-        associated_resource :work_package,
-                            link_title_attribute: :subject
+        associated_resource :entity,
+                            getter: ::API::V3::TimeEntries::EntityRepresenterFactory.create_getter_lambda(:entity),
+                            link: ::API::V3::TimeEntries::EntityRepresenterFactory.create_link_lambda(:entity)
 
         associated_resource :user
 
