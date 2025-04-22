@@ -37,15 +37,10 @@ RSpec.shared_examples_for "time entry contract" do
   end
 
   let(:other_user) { build_stubbed(:user) }
-  let(:time_entry_work_package) do
-    build_stubbed(:work_package,
-                  project: time_entry_project)
-  end
+  let(:time_entry_entity) { build_stubbed(:work_package, project: time_entry_project) }
   let(:time_entry_project) { build_stubbed(:project) }
   let(:time_entry_user) { current_user }
-  let(:time_entry_activity) do
-    build_stubbed(:time_entry_activity)
-  end
+  let(:time_entry_activity) { build_stubbed(:time_entry_activity) }
   let(:time_entry_activity_active) { true }
   let(:time_entry_spent_on) { Time.zone.today }
   let(:time_entry_hours) { 5 }
@@ -67,8 +62,8 @@ RSpec.shared_examples_for "time entry contract" do
   end
 
   before do
-    if time_entry_work_package
-      allow(time_entry_work_package)
+    if time_entry_entity
+      allow(time_entry_entity)
         .to receive(:visible?)
         .with(current_user)
         .and_return(work_package_visible)
@@ -119,17 +114,20 @@ RSpec.shared_examples_for "time entry contract" do
   it_behaves_like "is valid"
 
   context "when the work_package is within a different project than the provided project" do
-    let(:time_entry_work_package) { build_stubbed(:work_package) }
+    let(:another_project) { build_stubbed(:project) }
+    let(:time_entry_entity) { build_stubbed(:work_package, project: another_project) }
 
     it "is invalid" do
-      expect_valid(false, work_package_id: %i(invalid))
+      expect_valid(false, entity: %i(invalid))
     end
   end
 
   context "when the work_package is nil" do
-    let(:time_entry_work_package) { nil }
+    let(:time_entry_entity) { nil }
 
-    it_behaves_like "is valid"
+    it "is invalid" do
+      expect_valid(false, entity: %i(blank))
+    end
   end
 
   context "when the project is nil" do
@@ -253,8 +251,8 @@ RSpec.shared_examples_for "time entry contract" do
           .and_return project_versions
       end
 
-      if time_entry_work_package
-        allow(time_entry_work_package)
+      if time_entry_entity
+        allow(time_entry_entity)
           .to receive(:assignable_versions)
           .and_return wp_versions
       end
@@ -262,7 +260,7 @@ RSpec.shared_examples_for "time entry contract" do
 
     context "if no project and no work package is set" do
       let(:time_entry_project) { nil }
-      let(:time_entry_work_package) { nil }
+      let(:time_entry_entity) { nil }
 
       it "is empty" do
         expect(contract.assignable_versions)
@@ -271,7 +269,7 @@ RSpec.shared_examples_for "time entry contract" do
     end
 
     context "if a project is set but no work package" do
-      let(:time_entry_work_package) { nil }
+      let(:time_entry_entity) { nil }
 
       it "returns assignable_versions of the project" do
         expect(contract.assignable_versions)

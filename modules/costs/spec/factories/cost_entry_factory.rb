@@ -32,7 +32,7 @@ FactoryBot.define do
     user
     entity factory: :work_package
     cost_type
-    spent_on { Date.today }
+    spent_on { Date.current }
     units { 1 }
     comments { "" }
 

@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             body.with_row { render(TimeEntries::DaysAndHoursForm.new(form)) }
             body.with_row(display: show_work_package ? :block : :none) do
               render(
-                TimeEntries::WorkPackageForm.new(form, visible: show_work_package, limit_to_project_id: limit_to_project_id)
+                TimeEntries::EntityForm.new(form, visible: show_work_package, limit_to_project_id: limit_to_project_id)
               )
             end
             body.with_row { render(TimeEntries::ActivityForm.new(form)) }

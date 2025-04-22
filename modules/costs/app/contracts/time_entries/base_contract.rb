@@ -33,7 +33,7 @@ module TimeEntries
     include AssignableValuesContract
     include AssignableCustomFieldValues
 
-    delegate :work_package,
+    delegate :entity,
              :project,
              :available_custom_fields,
              :new_record?,
@@ -54,7 +54,9 @@ module TimeEntries
               unless: Proc.new { spent_on.blank? }
 
     attribute :project_id
-    attribute :work_package_id
+    attribute :entity
+    attribute :entity_id
+    attribute :entity_type
     attribute :activity_id do
       validate_activity_active
     end
@@ -84,21 +86,18 @@ module TimeEntries
 
     # Necessary for custom fields of type version.
     def assignable_versions(only_open: true)
-      work_package.try(:assignable_versions, only_open:) || project.try(:assignable_versions, only_open:) || []
+      entity.try(:assignable_versions, only_open:) || project.try(:assignable_versions, only_open:) || []
     end
 
     private
 
     def validate_entity
-      return unless model.entity || model.entity_changed?
-
       if model.entity.is_a?(WorkPackage)
         if work_package_invisible? || work_package_not_in_project?
           errors.add :entity, :invalid
         end
-      elsif model.entity.is_a?(TimeEntry)
-        # TODO: Add validation for time entry
-        true
+      elsif model.entity.is_a?(Meeting)
+        # TODO: Add validation for meeting
       end
     end
 

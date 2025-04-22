@@ -34,7 +34,7 @@ RSpec.describe TimeEntries::UpdateContract do
     let(:time_entry) do
       build_stubbed(:time_entry,
                     project: time_entry_project,
-                    work_package: time_entry_work_package,
+                    entity: time_entry_entity,
                     user: time_entry_user,
                     activity: time_entry_activity,
                     spent_on: time_entry_spent_on,
@@ -71,11 +71,11 @@ RSpec.describe TimeEntries::UpdateContract do
             end
           end
 
-          time_entry_work_package.project = new_project
+          time_entry_entity.project = new_project
 
           mock_permissions_for(current_user) do |mock|
-            mock.allow_in_project *new_project_permissions, project: new_project
-            mock.allow_in_project *permissions, project: time_entry_project
+            mock.allow_in_project(*new_project_permissions, project: new_project)
+            mock.allow_in_project(*permissions, project: time_entry_project)
           end
         end
       end

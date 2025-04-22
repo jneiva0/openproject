@@ -29,7 +29,7 @@
 #++
 
 module TimeEntries
-  class WorkPackageForm < ApplicationForm
+  class EntityForm < ApplicationForm
     def initialize(visible: true, limit_to_project_id: nil)
       super()
       @visible = visible
@@ -39,9 +39,11 @@ module TimeEntries
     form do |f|
       f.hidden name: :show_work_package, value: @visible
       f.hidden name: :limit_to_project_id, value: @limit_to_project_id
+      # TODO: Use global ID in the autocompleter
+      f.hidden name: :entity_type, value: "WorkPackage"
 
       if show_work_package_field?
-        f.work_package_autocompleter name: :work_package_id,
+        f.work_package_autocompleter name: :entity_id,
                                      label: TimeEntry.human_attribute_name(:work_package),
                                      required: work_package_required?,
                                      validation_message: work_package_validation_error,

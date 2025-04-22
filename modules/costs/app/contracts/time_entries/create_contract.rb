@@ -37,7 +37,7 @@ module TimeEntries
       return if allowed_to_log_for_others?
       return if allowed_to_log_to_himself?
 
-      errors.add :work_package, :cannot_log_for_this_work_package
+      errors.add :entity, :cannot_log_for_this_work_package
       errors.add :base, :error_unauthorized
     end
 
@@ -46,7 +46,15 @@ module TimeEntries
     end
 
     def allowed_to_log_to_himself?
-      model.user == user && user.allowed_in_work_package?(:log_own_time, model.work_package)
+      model.user == user && allowed_to_log_own?
+    end
+
+    def allowed_to_log_own?
+      case model.entity
+      when WorkPackage then user.allowed_in_work_package?(:log_own_time, model.entity)
+      when Meeting then user.allowed_in_project?(:log_own_time, model.project)
+      else false
+      end
     end
   end
 end

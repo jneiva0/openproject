@@ -31,7 +31,7 @@ require "spec_helper"
 RSpec.describe TimeEntries::DeleteContract do
   let(:current_user) { build_stubbed(:user) }
   let(:other_user) { build_stubbed(:user) }
-  let(:time_entry_work_package) { build_stubbed(:work_package, project: time_entry_project) }
+  let(:time_entry_entity) { build_stubbed(:work_package, project: time_entry_project) }
   let(:time_entry_project) { build_stubbed(:project) }
   let(:time_entry_user) { current_user }
   let(:time_entry_activity) { build_stubbed(:time_entry_activity) }
@@ -44,7 +44,7 @@ RSpec.describe TimeEntries::DeleteContract do
   let(:time_entry) do
     build_stubbed(:time_entry,
                   project: time_entry_project,
-                  work_package: time_entry_work_package,
+                  entity: time_entry_entity,
                   user: time_entry_user,
                   ongoing: time_entry_ongoing,
                   activity: time_entry_activity,
@@ -58,7 +58,7 @@ RSpec.describe TimeEntries::DeleteContract do
       mock.allow_in_project *permissions, project: time_entry_project
     end
 
-    allow(time_entry_work_package)
+    allow(time_entry_entity)
           .to receive(:visible?)
           .with(current_user)
           .and_return(work_package_visible)
