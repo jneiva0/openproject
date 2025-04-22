@@ -74,13 +74,13 @@ class CostEntry < ApplicationRecord
   end
 
   def before_validation
-    self.project = work_package.project if work_package && project.nil?
+    self.project = entity.project if entity && project.nil?
   end
 
   def validate
     errors.add :units, :invalid if units&.negative?
     errors.add :project_id, :invalid if project.nil?
-    errors.add :work_package_id, :invalid if work_package.nil? || (project != work_package.project)
+    errors.add :entity, :invalid if entity.nil? || (project != entity.project)
     errors.add :cost_type_id, :invalid if cost_type.present? && cost_type.deleted_at.present?
     errors.add :user_id, :invalid if project.present? && project.users.exclude?(user) && user_id_changed?
 

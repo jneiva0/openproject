@@ -45,18 +45,18 @@ RSpec.describe "my time tracking", :js do
   let(:project2) { create(:project_with_types) }
   let(:work_package1) { create(:work_package, project: project1) }
   let(:work_package2) { create(:work_package, project: project2) }
-  let!(:time_entry1) { create(:time_entry, user:, work_package: work_package1, spent_on: "2025-04-07", hours: 6.5) }
+  let!(:time_entry1) { create(:time_entry, user:, entity: work_package1, spent_on: "2025-04-07", hours: 6.5) }
   let!(:time_entry2) do
-    create(:time_entry, work_package: work_package1, user:, spent_on: "2025-04-09", hours: 1.0, start_time: (9 * 60) + 30,
+    create(:time_entry, entity: work_package1, user:, spent_on: "2025-04-09", hours: 1.0, start_time: (9 * 60) + 30,
                         time_zone:)
   end
-  let!(:time_entry3) { create(:time_entry, user:, work_package: work_package1, spent_on: "2025-04-14", hours: 3.0) }
-  let!(:time_entry4) { create(:time_entry, user:, work_package: work_package2, spent_on: "2025-04-09", hours: 2.0) }
+  let!(:time_entry3) { create(:time_entry, user:, entity: work_package1, spent_on: "2025-04-14", hours: 3.0) }
+  let!(:time_entry4) { create(:time_entry, user:, entity: work_package2, spent_on: "2025-04-09", hours: 2.0) }
   let!(:time_entry5) do
-    create(:time_entry, user:, work_package: work_package2, spent_on: "2025-04-09", hours: 1.0, start_time: (13 * 60) + 30,
+    create(:time_entry, user:, entity: work_package2, spent_on: "2025-04-09", hours: 1.0, start_time: (13 * 60) + 30,
                         time_zone:)
   end
-  let!(:time_entry6) { create(:time_entry, user:, work_package: work_package2, spent_on: "2025-04-14", hours: 2.0) }
+  let!(:time_entry6) { create(:time_entry, user:, entity: work_package2, spent_on: "2025-04-14", hours: 2.0) }
 
   before do
     login_as user

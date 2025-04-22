@@ -42,7 +42,7 @@ RSpec.describe WorkPackage do
                           author: user)
   end
   let!(:cost_entry) do
-    create(:cost_entry, work_package:, project:, units: 3, spent_on: Date.today, user:,
+    create(:cost_entry, entity: work_package, project:, units: 3, spent_on: Date.current, user:,
                         comments: "test entry")
   end
   let!(:budget) { create(:budget, project:) }

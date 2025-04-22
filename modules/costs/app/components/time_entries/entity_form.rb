@@ -58,14 +58,14 @@ module TimeEntries
                                        filters: work_package_completer_filters
                                      }
       else
-        f.hidden name: :work_package_id, value: model.work_package_id
+        f.hidden name: :entity_id, value: model.entity_id
       end
     end
 
     private
 
     def show_work_package_field?
-      return true if model.work_package_id.nil?
+      return true if model.entity_id.nil?
 
       @visible
     end
@@ -92,7 +92,7 @@ module TimeEntries
       if model.errors[:project_id].present?
         model.errors[:project_id].first
       else
-        model.errors[:work_package]&.first
+        model.errors[:entities]&.first
       end
     end
 

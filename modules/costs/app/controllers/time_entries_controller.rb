@@ -224,7 +224,7 @@ class TimeEntriesController < ApplicationController
                       entry
                     end
                   else
-                    TimeEntry.new(project: @project, work_package: @work_package, user: User.current)
+                    TimeEntry.new(project: @project, entity: @work_package, user: User.current)
                   end
   end
 end
