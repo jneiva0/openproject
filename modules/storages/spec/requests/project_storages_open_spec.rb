@@ -62,9 +62,9 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
     Storages::Peripherals::Registry.stub("nextcloud.services.folder_create", folder_create_service)
     Storages::Peripherals::Registry.stub("nextcloud.services.folder_permissions", folder_permissions_service)
     allow(Storages::Peripherals::StorageInteraction::Authentication).to receive(:authorization_state)
-      .and_return(authorization_state)
+                                                                          .and_return(authorization_state)
     allow(Storages::Peripherals::StorageInteraction::AuthenticationMethodSelector).to receive(:new)
-      .and_return(auth_method_selector)
+                                                                                        .and_return(auth_method_selector)
   end
 
   it "redirects to the project folder in the storage" do
@@ -130,9 +130,9 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
         destination = CGI.escape("http://test.host/#{path}")
         expect(last_response).to have_http_status(:found)
         expect(last_response.headers["Location"]).to eq(
-          "http://test.host/oauth_clients/#{storage.oauth_client.client_id}/ensure_connection?" \
-          "destination_url=#{destination}&storage_id=#{storage.id}"
-        )
+                                                       "http://test.host/oauth_clients/#{storage.oauth_client.client_id}/ensure_connection?" \
+                                                         "destination_url=#{destination}&storage_id=#{storage.id}"
+                                                     )
       end
     end
 
