@@ -54,6 +54,10 @@ module CustomFields::Inputs::Base::Utils
     @custom_field.is_required?
   end
 
+  def attribute_name
+    @custom_field.attribute_name(:camel_case)
+  end
+
   def qa_field_name
     @custom_field.attribute_name(:kebab_case)
   end

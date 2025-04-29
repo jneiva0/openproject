@@ -42,12 +42,15 @@ class CustomFields::Inputs::Base::Input < ApplicationForm
   end
 
   def input_attributes
-    base_input_attributes.merge(
+    attrs = base_input_attributes.merge(
       {
         data: { "qa-field-name": qa_field_name },
-        value:
+        value:,
+        label_arguments: { classes: "FormControl-label--withHelpText2" }
       }
     )
+    attrs[:label] = helpers.safe_join([attrs[:label], " ", attribute_help_text(attribute_name, @object.model_name)])
+    attrs
   end
 
   def custom_value

@@ -1,6 +1,6 @@
-<div
+<span
     *ngIf="exists"
-    class="spot-link help-text--entry"
+    class="Link Link--muted help-text--entry"
     [attr.data-qa-help-text-for]="attribute"
     [title]="text.open_dialog"
     (click)="handleClick($event)"
@@ -10,5 +10,5 @@
     tabindex="0"
 >
   <span *ngIf="additionalLabel" [textContent]="additionalLabel"></span>
-  <op-icon icon-classes="icon3 icon-help1"></op-icon>
-</div>
+  <span class="Link--content"><svg question-icon size="xsmall"></svg></span>
+</span>

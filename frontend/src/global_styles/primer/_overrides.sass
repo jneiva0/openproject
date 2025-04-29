@@ -113,3 +113,16 @@ ul.SegmentedControl,
 .generic-table
   .generic-table--action-menu-button
     min-width: max-content !important
+
+.FormControl-label
+  &--withHelpText2
+    display: inline-flex
+
+    > :not(opce-attribute-help-text)::before
+      content: "\00a0"
+
+    > opce-attribute-help-text
+      align-self: baseline
+      line-height: 1
+      margin-left: var(--base-size-6)
+      order: 1

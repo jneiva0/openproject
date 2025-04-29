@@ -31,7 +31,10 @@ module Projects
   module Settings
     class NameForm < ApplicationForm
       form do |f|
-        f.text_field name: :name, label: attribute_name(:name), required: true
+        f.text_field name: :name,
+                     label: attribute_label_with_help_text(:name),
+                     required: true,
+                     label_arguments: { class: "FormControl-label--withHelpText2" }
       end
     end
   end

@@ -56,4 +56,19 @@ class ApplicationForm < Primer::Forms::Base
   def attribute_name(field_name)
     model.class.human_attribute_name(field_name)
   end
+
+  def attribute_label(field_name)
+    attribute_name(field_name)
+  end
+
+  def attribute_label_with_help_text(field_name, attribute_scope = nil)
+    helpers.safe_join([attribute_label(field_name), " ", attribute_help_text(field_name, attribute_scope)])
+  end
+
+  def attribute_help_text(field_name, attribute_scope = nil)
+    helpers.angular_component_tag(
+      "opce-attribute-help-text",
+      inputs: { attribute: field_name, attributeScope: attribute_scope || model&.model_name }
+    )
+  end
 end
