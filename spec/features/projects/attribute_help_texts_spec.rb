@@ -33,7 +33,7 @@ require "spec_helper"
 RSpec.describe "Project attribute help texts", :js do
   let(:project) { create(:project) }
 
-  let(:instance) do
+  let(:description_help_text) do
     create(:project_help_text,
            attribute_name: :status,
            help_text: "Some **help text** for status.")
@@ -53,13 +53,13 @@ RSpec.describe "Project attribute help texts", :js do
                            end_column: 1)
   end
 
-  let(:modal) { Components::AttributeHelpTextModal.new(instance) }
+  let(:description_modal) { Components::AttributeHelpTextModal.new(description_help_text) }
   let(:wp_page) { Pages::FullWorkPackage.new work_package }
 
   before do
     login_as user
     project
-    instance
+    description_modal
   end
 
   shared_examples "allows to view help texts" do
@@ -74,32 +74,41 @@ RSpec.describe "Project attribute help texts", :js do
       expect(page).to have_css("#{test_selector('op-widget-box--header')} .help-text--entry", wait: 10)
 
       # Open help text modal
-      modal.open!
-      expect(modal.modal_container).to have_css("strong", text: "help text")
-      modal.expect_edit(editable: user.allowed_globally?(:edit_attribute_help_texts))
+      description_modal.open!
+      expect(description_modal.modal_container).to have_css("strong", text: "help text")
+      description_modal.expect_edit(editable: user.allowed_globally?(:edit_attribute_help_texts))
 
-      modal.close!
+      description_modal.close!
     end
   end
 
   describe "as admin" do
+    let(:name_help_text) do
+      create(:project_help_text,
+             attribute_name: :name,
+             help_text: "Some **help text** for name.")
+    end
     let(:user) { create(:admin) }
+
+    let(:name_modal) { Components::AttributeHelpTextModal.new(name_help_text) }
+
+    before do
+      name_help_text
+    end
 
     it_behaves_like "allows to view help texts"
 
     it "shows the help text on the project create form" do
       visit new_project_path
 
-      page.find(".op-fieldset--legend", text: "ADVANCED SETTINGS").click
-
-      expect(page).to have_css(".spot-form-field--label attribute-help-text", wait: 10)
+      expect(page).to have_css(".FormControl-label opce-attribute-help-text", wait: 10)
 
       # Open help text modal
-      modal.open!
-      expect(modal.modal_container).to have_css("strong", text: "help text")
-      modal.expect_edit(editable: user.allowed_globally?(:edit_attribute_help_texts))
+      name_modal.open!
+      expect(name_modal.modal_container).to have_css("strong", text: "help text")
+      name_modal.expect_edit(editable: user.allowed_globally?(:edit_attribute_help_texts))
 
-      modal.close!
+      name_modal.close!
     end
   end
 
