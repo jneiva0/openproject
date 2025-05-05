@@ -47,21 +47,20 @@ class Storages::ProjectStoragesController < ApplicationController
   def open
     @project_storage.open(current_user).match(
       on_success: ->(url) { redirect_to url, allow_other_host: true },
-      on_failure: ->(error) { show_error(error.to_s) }
+      on_failure: ->(error) { show_error(error.code.to_s) }
     )
   end
 
   private
 
   def ensure_remote_identity
-    selector = Storages::Peripherals::StorageInteraction::AuthenticationMethodSelector.new(user: current_user, storage:)
-    return unless selector.storage_oauth?
-
-    case Storages::Peripherals::StorageInteraction::Authentication.authorization_state(storage:, user: current_user)
+    case Storages::Adapters::Authentication.authorization_state(storage:, user: current_user)
     when :not_connected, :failed_authorization
       redirect_to ensure_connection_url
     when :error
       show_error(I18n.t("project_storages.open.remote_identity_error"))
+    else
+      true
     end
   end
 
@@ -72,6 +71,7 @@ class Storages::ProjectStoragesController < ApplicationController
     folder_create_service.call(storage:, project_storages_scope: project_storage_scope).on_failure do |result|
       return show_error(result.errors.full_messages)
     end
+
     @project_storage.reload
   end
 
@@ -79,7 +79,7 @@ class Storages::ProjectStoragesController < ApplicationController
     return unless @project_storage.project_folder_automatic?
 
     result = test_folder_access
-    return if result.success? || result.errors.code != :forbidden
+    return if result.success? || result.failure.code != :forbidden
 
     # Note: The time this operation takes may still scale with the number of users.
     # If this becomes a problem, we will have to update downstream code to allow changing permissions for a few users instead of
@@ -98,19 +98,19 @@ class Storages::ProjectStoragesController < ApplicationController
   end
 
   def folder_create_service
-    Storages::Peripherals::Registry.resolve("#{storage}.services.folder_create")
+    Storages::Adapters::Registry.resolve("#{storage}.services.upkeep_managed_folders")
   end
 
   def folder_permissions_service
-    Storages::Peripherals::Registry.resolve("#{storage}.services.folder_permissions")
+    Storages::Adapters::Registry.resolve("#{storage}.services.upkeep_managed_folder_permissions")
   end
 
   def file_info
-    Storages::Peripherals::Registry.resolve("#{storage}.queries.file_info")
+    Storages::Adapters::Registry.resolve("#{storage}.queries.file_info")
   end
 
   def user_bound
-    Storages::Peripherals::Registry.resolve("#{storage}.authentication.user_bound")
+    Storages::Adapters::Registry.resolve("#{storage}.authentication.user_bound")
   end
 
   def storage
@@ -122,11 +122,9 @@ class Storages::ProjectStoragesController < ApplicationController
   end
 
   def test_folder_access
-    file_info.call(
-      storage:,
-      auth_strategy: user_bound.call(storage:, user: current_user),
-      file_id: @project_storage.project_folder_id
-    )
+    Storages::Adapters::Input::FileInfo.build(file_id: @project_storage.project_folder_id).bind do |input_data|
+      file_info.call(storage:, auth_strategy: user_bound.call(current_user, storage), input_data:)
+    end
   end
 
   def show_error(message)

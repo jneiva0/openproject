@@ -32,9 +32,10 @@ module Storages
   module Adapters
     module Input
       class StrategyContract < Dry::Validation::Contract
+        AUTH_METHODS = %i[noop basic_auth oauth_client_credentials oauth_user_token sso_user_token].to_set.freeze
+
         params do
-          # The included list need to be made dynamic
-          required(:key).filled(:symbol, included_in?: %i[noop basic_auth oauth_client_credentials oauth_user_token])
+          required(:key).filled(:symbol, included_in?: AUTH_METHODS)
           optional(:user).maybe(type?: User)
           optional(:storage).maybe(type?: Storage)
           optional(:use_cache).maybe(:bool)

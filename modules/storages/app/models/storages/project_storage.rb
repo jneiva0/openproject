@@ -83,16 +83,17 @@ module Storages
     end
 
     def open(user)
-      auth_strategy = Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(user:, storage:)
+      auth_strategy = Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(user, storage)
 
       result = if project_folder_not_accessible?(user)
-                 open_project_storage_url
+                 Adapters::Registry.resolve("#{storage}.queries.open_storage").call(storage:, auth_strategy:, input_data: nil)
                else
                  open_file_link(auth_strategy)
                end
 
-      result.either(->(success) { ServiceResult.success(result: success) },
-                    ->(failure) { ServiceResult.failure(errors: failure) })
+      # FIXME: We probably could make this into a service by itself.
+      #   so errors can be more descriptive. 2025-05-05 @mereghost
+      result.either(-> { ServiceResult.success(result: it) }, -> { ServiceResult.failure(errors: it) })
     end
 
     def open_project_storage_url
@@ -102,7 +103,7 @@ module Storages
     private
 
     def open_file_link(auth_strategy)
-      Adapters::Input::OpenFileLink.build(file_id: project_folder_id, open_location: false).bind do |input_data|
+      Adapters::Input::OpenFileLink.build(file_id: project_folder_id).bind do |input_data|
         Adapters::Registry.resolve("#{storage}.queries.open_file_link").call(storage:, auth_strategy:, input_data:)
       end
     end

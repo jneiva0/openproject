@@ -31,421 +31,231 @@
 require "spec_helper"
 require_module_spec_helper
 
-RSpec.describe Storages::NextcloudManagedFolderPermissionsService, :webmock do
-  describe "#call" do
-    subject(:service_call) { described_class.call(storage:) }
+module Storages
+  FakeProject = Data.define(:id, :name)
 
-    let(:storage) { create(:nextcloud_storage_with_complete_configuration, :as_automatically_managed) }
-    let(:project) { create(:project, members: { project_user => role, user_without_remote_identity => role }) }
-    let(:role) { create(:project_role, permissions: %i[read_files]) }
-    let(:non_member_permissions) { %i[read_files view_work_packages] }
+  class TestIdentifier < Adapters::Providers::Nextcloud::ManagedFolderIdentifier
+    def initialize(project_storage)
+      super
+      @project = FakeProject.new(-273, project_storage.project.name)
+    end
+  end
 
-    # rubocop:disable RSpec/VerifiedDoubles
-    let(:set_permissions_service) { double(call: ServiceResult.success) }
-    let(:add_user_to_group_service) { double(call: ServiceResult.success) }
-    let(:remove_user_from_group_service) { double(call: ServiceResult.success) }
-    let(:group_users_service) { double(call: ServiceResult.success(result: ["unrelated-remote-identity"])) }
-    let(:auth_strategy) { Object.new }
-    # rubocop:enable RSpec/VerifiedDoubles
+  RSpec.describe NextcloudManagedFolderPermissionsService, :webmock do
+    shared_let(:oidc_provider) { create(:oidc_provider) }
 
-    let!(:project_storage) { create(:project_storage, :as_automatically_managed, project:, storage:, project_folder_id: "123") }
-    let!(:non_project_user) { create(:user) }
-    let!(:project_user) { create(:user) }
-    let!(:user_without_remote_identity) { create(:user) }
-    let!(:admin_user) { create(:admin) }
-    let!(:non_project_remote_identity) { create(:remote_identity, integration: storage, user: non_project_user) }
-    let!(:project_remote_identity) { create(:remote_identity, integration: storage, user: project_user) }
-    let!(:admin_remote_identity) { create(:remote_identity, integration: storage, user: admin_user) }
+    shared_let(:admin) { create(:admin) }
+    shared_let(:multiple_projects_user) { create(:user) }
+    shared_let(:single_project_user) { create(:user, authentication_provider: oidc_provider) }
+    shared_let(:oidc_admin) { create(:admin, authentication_provider: oidc_provider) }
+    shared_let(:storage) { create(:nextcloud_storage_with_local_connection, :as_automatically_managed) }
+
+    shared_let(:remote_identities) do
+      [create(:remote_identity,
+              user: admin,
+              auth_source: storage.oauth_client,
+              integration: storage,
+              origin_user_id: "anakin"),
+       create(:remote_identity,
+              user: multiple_projects_user,
+              auth_source: storage.oauth_client,
+              integration: storage,
+              origin_user_id: "leia"),
+       create(:remote_identity,
+              user: single_project_user,
+              auth_source: oidc_provider,
+              integration: storage,
+              origin_user_id: "luke")]
+    end
+
+    subject(:service) { described_class.new(storage:) }
+
+    shared_let(:non_member_role) { create(:non_member, permissions: ["read_files"]) }
+    shared_let(:ordinary_role) { create(:project_role, permissions: %w[read_files write_files]) }
+
+    shared_let(:project) do
+      create(:project, name: "[Sample] Project Name / Ehuu",
+                       members: { multiple_projects_user => ordinary_role, single_project_user => ordinary_role })
+    end
+    shared_let(:project_storage) do
+      create(:project_storage, :with_historical_data, project_folder_mode: "automatic", storage:, project:)
+    end
+
+    shared_let(:disallowed_chars_project) do
+      create(:project, name: '<=o=> | "Jedi" Project Folder ///', members: { multiple_projects_user => ordinary_role })
+    end
+    shared_let(:disallowed_chars_project_storage) do
+      create(:project_storage, :with_historical_data,
+             project_folder_mode: "automatic", project: disallowed_chars_project, storage:)
+    end
+
+    shared_let(:inactive_project) do
+      create(:project, name: "INACTIVE PROJECT! f0r r34lz", active: false,
+                       members: { multiple_projects_user => ordinary_role })
+    end
+    shared_let(:inactive_project_storage) do
+      create(:project_storage, :with_historical_data, project_folder_mode: "automatic", project: inactive_project, storage:)
+    end
+
+    shared_let(:public_project) { create(:public_project, name: "PUBLIC PROJECT", active: true) }
+    shared_let(:public_project_storage) do
+      create(:project_storage, :with_historical_data, project_folder_mode: "automatic", project: public_project, storage:)
+    end
 
     before do
-      ProjectRole.non_member.update!(permissions: non_member_permissions)
-
-      allow(Storages::Peripherals::Registry).to receive(:resolve)
-        .with("nextcloud.commands.set_permissions")
-        .and_return(set_permissions_service)
-      allow(Storages::Peripherals::Registry).to receive(:resolve)
-        .with("nextcloud.commands.add_user_to_group")
-        .and_return(add_user_to_group_service)
-      allow(Storages::Peripherals::Registry).to receive(:resolve)
-        .with("nextcloud.commands.remove_user_from_group")
-        .and_return(remove_user_from_group_service)
-      allow(Storages::Peripherals::Registry).to receive(:resolve)
-        .with("nextcloud.queries.group_users")
-        .and_return(group_users_service)
-      allow(Storages::Peripherals::Registry).to receive(:resolve)
-        .with("nextcloud.authentication.userless")
-        .and_return(-> { auth_strategy })
+      Adapters::Registry.stub("nextcloud.models.managed_folder_identifier", TestIdentifier)
+      setup_remote_folders
     end
 
-    it { is_expected.to be_success }
+    after { delete_remote_folders }
 
-    it "has no errors" do
-      expect(service_call.errors).to be_empty
-    end
+    describe "#call" do
+      it "adds already logged in users to the project folder", vcr: "nextcloud/managed_folder_set_permissions" do
+        expect(service.call).to be_success
 
-    it "adds users with a remote identity to the remote group", :aggregate_failures do
-      service_call
-
-      expect(add_user_to_group_service).to have_received(:call).exactly(3).times
-      expect(add_user_to_group_service).to have_received(:call)
-        .with(storage:, auth_strategy:, group: storage.group, user: project_remote_identity.origin_user_id)
-      expect(add_user_to_group_service).to have_received(:call)
-        .with(storage:, auth_strategy:, group: storage.group, user: admin_remote_identity.origin_user_id)
-      expect(add_user_to_group_service).to have_received(:call)
-        .with(storage:, auth_strategy:, group: storage.group, user: non_project_remote_identity.origin_user_id)
-    end
-
-    it "removes the unrelated user from the remote group" do
-      service_call
-
-      expect(remove_user_from_group_service).to have_received(:call)
-        .with(storage:, auth_strategy:, group: storage.group, user: "unrelated-remote-identity")
-    end
-
-    it "grants permissions to project users" do
-      service_call
-
-      expect(set_permissions_service).to have_received(:call).once
-      expect(set_permissions_service).to have_received(:call).with(
-        storage:,
-        auth_strategy:,
-        input_data: having_attributes(
-          file_id: "123", user_permissions: array_including(
-            { user_id: project_remote_identity.origin_user_id, permissions: [:read_files] }
-          )
+        # Group, user1, user2...
+        expect(remote_permissions_for(project_storage)).to contain_exactly(
+          { user_id: "OpenProject", permissions: [] },
+          { user_id: "OpenProject", permissions: described_class::FILE_PERMISSIONS },
+          { user_id: "anakin", permissions: described_class::FILE_PERMISSIONS },
+          { user_id: "luke", permissions: %i[read_files write_files] },
+          { user_id: "leia", permissions: %i[read_files write_files] }
         )
-      )
-    end
 
-    it "grants permissions to admin users" do
-      service_call
-
-      expect(set_permissions_service).to have_received(:call).once
-      expect(set_permissions_service).to have_received(:call).with(
-        storage:,
-        auth_strategy:,
-        input_data: having_attributes(
-          file_id: "123", user_permissions: array_including(
-            {
-              user_id: admin_remote_identity.origin_user_id,
-              permissions: %i[read_files write_files create_files delete_files share_files]
-            }
-          )
+        expect(remote_permissions_for(disallowed_chars_project_storage)).to contain_exactly(
+          { user_id: "OpenProject", permissions: [] },
+          { user_id: "OpenProject",
+            permissions: described_class::FILE_PERMISSIONS },
+          { user_id: "anakin",
+            permissions: described_class::FILE_PERMISSIONS },
+          { user_id: "leia",
+            permissions: %i[read_files write_files] }
         )
-      )
-    end
 
-    it "grants permissions to the system-level OpenProject user" do
-      service_call
-
-      expect(set_permissions_service).to have_received(:call).once
-      expect(set_permissions_service).to have_received(:call).with(
-        storage:,
-        auth_strategy:,
-        input_data: having_attributes(
-          file_id: "123", user_permissions: array_including(
-            { user_id: "OpenProject", permissions: %i[read_files write_files create_files delete_files share_files] }
-          )
-        )
-      )
-    end
-
-    it "grants no permissions to non-project users" do
-      service_call
-
-      expect(set_permissions_service).to have_received(:call).once
-      expect(set_permissions_service).not_to have_received(:call).with(
-        storage:,
-        auth_strategy:,
-        input_data: having_attributes(
-          file_id: "123", user_permissions: array_including(hash_including(user_id: non_project_remote_identity.origin_user_id))
-        )
-      )
-    end
-
-    context "when the project storage is not automatic" do
-      let!(:project_storage) { create(:project_storage, project:, storage:, project_folder_mode: "manual") }
-
-      it { is_expected.to be_success }
-
-      it "has no errors" do
-        expect(service_call.errors).to be_empty
+        expect(remote_permissions_for(inactive_project_storage)).to be_empty
       end
 
-      it "updates the remote group regardless" do
-        service_call
+      it "if the project is public allows any logged in user to read the files",
+         vcr: "nextcloud/managed_folder_set_permissions_public" do
+        service.call
 
-        expect(add_user_to_group_service).to have_received(:call).exactly(3).times
-      end
-
-      it "does not touch permissions" do
-        service_call
-
-        expect(set_permissions_service).not_to have_received(:call)
-      end
-    end
-
-    context "when the project is public" do
-      before do
-        project.update!(public: true)
-      end
-
-      it "grants permissions to non-project users as well" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call).once
-        expect(set_permissions_service).to have_received(:call).with(
-          storage:,
-          auth_strategy:,
-          input_data: having_attributes(
-            file_id: "123", user_permissions: array_including(
-              { user_id: non_project_remote_identity.origin_user_id, permissions: [:read_files] }
-            )
-          )
+        expect(remote_permissions_for(public_project_storage)).to contain_exactly(
+          { user_id: "OpenProject", permissions: [] },
+          { user_id: "OpenProject",
+            permissions: described_class::FILE_PERMISSIONS },
+          { user_id: "anakin",
+            permissions: described_class::FILE_PERMISSIONS },
+          { user_id: "admin", permissions: [:read_files] },
+          { user_id: "luke", permissions: [:read_files] },
+          { user_id: "leia", permissions: [:read_files] }
         )
       end
 
-      context "and when the non-member permissions don't include file access" do
-        let(:non_member_permissions) { %i[view_work_packages] }
+      it "ensures that admins have full access to all folders", vcr: "nextcloud/managed_folder_set_permissions_admin_access" do
+        service.call
 
-        it "grants no permissions to non-project users" do
-          service_call
+        [project_storage, disallowed_chars_project_storage, public_project_storage].each do |ps|
+          expect(remote_permissions_for(ps))
+            .to include({ user_id: "anakin", permissions: %i[read_files write_files create_files delete_files share_files] })
+        end
+      end
 
-          expect(set_permissions_service).to have_received(:call).once
-          expect(set_permissions_service).not_to have_received(:call).with(
-            storage:,
-            auth_strategy:,
-            input_data: having_attributes(
-              file_id: "123",
-              user_permissions: array_including(hash_including(user_id: non_project_remote_identity.origin_user_id))
-            )
-          )
+      it "adds and remove users from the remote group", vcr: "nextcloud/managed_folder_set_permissions_group_users" do
+        service.call
+
+        users = Adapters::Input::GroupUsers.build(group: storage.group).bind do |input_data|
+          Adapters::Registry["nextcloud.queries.group_users"].call(storage:, auth_strategy:, input_data:).value!
+        end
+
+        expect(users).to match_array(%w[OpenProject anakin luke leia admin])
+      ensure
+        %w[anakin luke leia].each do |user|
+          Adapters::Input::RemoveUserFromGroup.build(group: storage.group, user:).bind do |input_data|
+            Adapters::Registry["nextcloud.commands.remove_user_from_group"].call(storage:, auth_strategy:, input_data:)
+          end
         end
       end
     end
 
-    context "when the project storage's project is not active" do
-      before do
-        project.update!(active: false)
-      end
+    private
 
-      it { is_expected.to be_success }
-
-      it "has no errors" do
-        expect(service_call.errors).to be_empty
-      end
-
-      it "does not touch permissions" do
-        service_call
-
-        expect(set_permissions_service).not_to have_received(:call)
-      end
-    end
-
-    context "when all users are part of the remote group" do
-      let(:group_users_service) do
-        double(call: ServiceResult.success(result: [ # rubocop:disable RSpec/VerifiedDoubles
-                                             non_project_remote_identity.origin_user_id,
-                                             project_remote_identity.origin_user_id,
-                                             admin_remote_identity.origin_user_id
-                                           ]))
-      end
-
-      it "does not change the remote group" do
-        service_call
-
-        expect(add_user_to_group_service).not_to have_received(:call)
-        expect(remove_user_from_group_service).not_to have_received(:call)
-      end
-    end
-
-    context "when admin was explicitly added to the project with a restricted role" do
-      let(:project) { create(:project, members: { admin_user => role }) }
-
-      it "grants the user admin-level permissions" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call).once
-        expect(set_permissions_service).to have_received(:call).with(
-          storage:,
-          auth_strategy:,
-          input_data: having_attributes(
-            file_id: "123", user_permissions: array_including(
-              {
-                user_id: admin_remote_identity.origin_user_id,
-                permissions: %i[read_files write_files create_files delete_files share_files]
-              }
-            )
-          )
-        )
-      end
-    end
-
-    context "when project folder was not yet created" do
-      let!(:project_storage) { create(:project_storage, :as_automatically_managed, project:, storage:, project_folder_id: "") }
-
-      it "does not touch permissions" do
-        service_call
-
-        expect(set_permissions_service).not_to have_received(:call)
-      end
-    end
-
-    context "when there are multiple project storages" do
-      let!(:other_project_storage) { create(:project_storage, :as_automatically_managed, storage:, project_folder_id: "456") }
-      let!(:manual_project_storage) do
-        create(:project_storage, project_folder_mode: "manual", storage:, project_folder_id: "789")
-      end
-
-      it "sets permissions for all active, automatically managed project storages" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call).twice
-        expect(set_permissions_service).to have_received(:call).with(
-          storage:,
-          auth_strategy:,
-          input_data: having_attributes(file_id: "123")
-        )
-        expect(set_permissions_service).to have_received(:call).with(
-          storage:,
-          auth_strategy:,
-          input_data: having_attributes(file_id: "456")
-        )
-      end
-
-      context "and when a project storage scope is passed" do
-        subject(:service_call) { described_class.call(storage:, project_storages_scope: project_storage_scope) }
-
-        let(:project_storage_scope) { Storages::ProjectStorage.where(id: [project_storage.id, manual_project_storage.id]) }
-
-        it "only works on project storages from the scope" do
-          service_call
-
-          expect(set_permissions_service).to have_received(:call).once
-          expect(set_permissions_service).to have_received(:call).with(
-            storage:,
-            auth_strategy:,
-            input_data: having_attributes(file_id: "123")
-          )
-        end
-
-        it "does not work on inactive or non-automatically managed project storages within the scope" do
-          service_call
-
-          expect(set_permissions_service).not_to have_received(:call).with(
-            storage:,
-            auth_strategy:,
-            input_data: having_attributes(file_id: "789")
-          )
+    def setup_remote_folders
+      storage.project_storages.each do |project_storage|
+        Adapters::Input::CreateFolder
+          .build(folder_name: project_storage.managed_project_folder_path, parent_location: "/").bind do |input_data|
+          Adapters::Registry["nextcloud.commands.create_folder"].call(storage:, auth_strategy:, input_data:).bind do
+            project_storage.update(project_folder_id: it.id)
+          end
         end
       end
     end
 
-    context "when project storages exist for other storages" do
-      let!(:other_project_storage) { create(:project_storage, :as_automatically_managed, project_folder_id: "456") }
-
-      it "only works on project storages for current storage" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call).once
-        expect(set_permissions_service).to have_received(:call).with(
-          storage:,
-          auth_strategy:,
-          input_data: having_attributes(file_id: "123")
-        )
+    def delete_remote_folders
+      storage.project_storages.each do |project_storage|
+        Adapters::Input::DeleteFolder.build(location: project_storage.managed_project_folder_path).bind do |input_data|
+          Adapters::Registry["nextcloud.commands.delete_folder"].call(storage:, auth_strategy:, input_data:)
+        end
       end
     end
 
-    context "when fetching users of remote group fails" do
-      let(:group_users_service) { double(call: ServiceResult.failure(errors: Storages::StorageError.new(code: 418))) } # rubocop:disable RSpec/VerifiedDoubles
-
-      it { is_expected.to be_failure }
-
-      it "has errors" do
-        expect(service_call.errors).to be_present
-      end
-
-      it "does not change users of remote group" do
-        service_call
-
-        expect(add_user_to_group_service).not_to have_received(:call)
-        expect(remove_user_from_group_service).not_to have_received(:call)
-      end
-
-      it "updates permissions" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call)
+    def remote_permissions_for(project_storage)
+      Adapters::Authentication[auth_strategy].call(storage:) do |http|
+        request_url = UrlBuilder.url(storage.uri, "remote.php/dav/files", storage.username,
+                                     project_storage.managed_project_folder_path)
+        response = http.request(:propfind, request_url, xml: permission_request_body)
+        parse_acl_xml response.body.to_s
       end
     end
 
-    context "when adding users to remote group fails" do
-      let(:add_user_to_group_service) { double(call: ServiceResult.failure(errors: Storages::StorageError.new(code: 418))) } # rubocop:disable RSpec/VerifiedDoubles
+    def permission_request_body
+      Nokogiri::XML::Builder.new do |xml|
+        xml["d"].propfind(
+          "xmlns:d" => "DAV:",
+          "xmlns:nc" => "http://nextcloud.org/ns"
+        ) do
+          xml["d"].prop do
+            xml["nc"].send(:"acl-list")
+          end
+        end
+      end.to_xml
+    end
 
-      it { is_expected.to be_success }
+    def parse_acl_xml(xml)
+      found_code = "d:status[text() = 'HTTP/1.1 200 OK']"
+      not_found_code = "d:status[text() = 'HTTP/1.1 404 Not Found']"
+      happy_path = "/d:multistatus/d:response/d:propstat[#{found_code}]/d:prop/nc:acl-list"
+      not_found_path = "/d:multistatus/d:response/d:propstat[#{not_found_code}]/d:prop"
 
-      it "has errors" do
-        expect(service_call.errors).to be_present
-      end
-
-      it "attempts all changes to remote group" do
-        service_call
-
-        expect(add_user_to_group_service).to have_received(:call).at_least(:once)
-        expect(remove_user_from_group_service).to have_received(:call).at_least(:once)
-      end
-
-      it "updates permissions" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call)
+      if Nokogiri::XML(xml).xpath(not_found_path).children.map(&:name).include?("acl-list")
+        []
+      else
+        Nokogiri::XML(xml).xpath(happy_path).children.map do |acl|
+          acl.children.each_with_object({ user_id: "", permissions: [] }) do |entry, agg|
+            agg[:user_id] = entry.text if entry.name == "acl-mapping-id"
+            agg[:permissions] = translate_mask_to_permissions(entry.text.to_i) if entry.name == "acl-permissions"
+          end
+        end
       end
     end
 
-    context "when removing users from remote group fails" do
-      let(:remove_user_from_group_service) { double(call: ServiceResult.failure(errors: Storages::StorageError.new(code: 418))) } # rubocop:disable RSpec/VerifiedDoubles
+    def translate_mask_to_permissions(number)
+      Adapters::Providers::Nextcloud::Commands::SetPermissionsCommand::PERMISSIONS_MAP
+        .each_with_object([]) { |(permission, mask), list| list << permission if number & mask == mask }
+    end
 
-      it { is_expected.to be_success }
-
-      it "has errors" do
-        expect(service_call.errors).to be_present
-      end
-
-      it "attempts all changes to remote group" do
-        service_call
-
-        expect(add_user_to_group_service).to have_received(:call).at_least(:once)
-        expect(remove_user_from_group_service).to have_received(:call).at_least(:once)
-      end
-
-      it "updates permissions" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call)
+    def set_permissions_on(file_id, user_permissions)
+      Adapters::Input::SetPermissions.build(user_permissions:, file_id:).bind do |input_data|
+        Adapters::Registry["nextcloud.commands.set_permissions"].call(storage:, auth_strategy:, input_data:)
       end
     end
 
-    context "when setting permissions fails" do
-      let(:set_permissions_service) { double(call: ServiceResult.failure(errors: Storages::StorageError.new(code: 418))) } # rubocop:disable RSpec/VerifiedDoubles
-
-      it { is_expected.to be_success }
-
-      it "has errors" do
-        expect(service_call.errors).to be_present
-      end
-
-      it "applies all changes to remote group" do
-        service_call
-
-        expect(add_user_to_group_service).to have_received(:call).at_least(:once)
-        expect(remove_user_from_group_service).to have_received(:call).at_least(:once)
-      end
-
-      it "attempts to update permissions" do
-        service_call
-
-        expect(set_permissions_service).to have_received(:call)
+    def create_folder_for(project_storage, folder_override = nil)
+      folder_name = folder_override || project_storage.managed_project_folder_name
+      Adapters::Input::CreateFolder.build(parent_location: storage.group_folder, folder_name:).bind do |input_data|
+        Adapters::Registry["nextcloud.commands.create_folder"].call(storage:, auth_strategy:, input_data:)
       end
     end
+
+    def auth_strategy = Adapters::Registry["nextcloud.authentication.userless"].call
   end
 end

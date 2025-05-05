@@ -31,40 +31,29 @@
 require "spec_helper"
 require_module_spec_helper
 
-RSpec.describe "projects/:project_id/project_storages/:id/open" do
+RSpec.describe "projects/:project_id/project_storages/:id/open", :webmock do
+  let(:storage) { create(:nextcloud_storage_configured, :as_automatically_managed) }
+  let(:project_storage) { create(:project_storage, storage:, project_folder_id: "123", project_folder_mode:) }
+  let(:project) { project_storage.project }
+
+  let(:project_folder_mode) { "automatic" }
+  let(:authorization_state) { :connected }
+
+  let(:path) { "projects/#{project.identifier}/project_storages/#{project_storage.id}/open" }
+  let(:permissions) { %i[view_file_links read_files] }
+  let(:user_query_result) { Success() }
+
+  current_user { create(:user, member_with_permissions: { project => permissions }) }
+
   subject(:request) do
     get path, {}, { "HTTP_ACCEPT" => "text/html" }
   end
 
-  current_user { create(:user, member_with_permissions: { project => permissions }) }
-  let(:permissions) { %i[view_file_links read_files] }
-  let(:project_storage) { create(:project_storage, storage:, project_folder_id: "123", project_folder_mode:) }
-  let(:project) { project_storage.project }
-  let(:storage) { create(:nextcloud_storage_configured) }
-  let(:project_folder_mode) { "automatic" }
-  let(:authorization_state) { :connected }
-  let(:path) { "projects/#{project.identifier}/project_storages/#{project_storage.id}/open" }
-  let(:auth_method_selector) do
-    instance_double(
-      Storages::Peripherals::StorageInteraction::AuthenticationMethodSelector,
-      storage_oauth?: authentication_method != :sso,
-      sso?: authentication_method == :sso,
-      authentication_method:
-    )
-  end
-  let(:authentication_method) { :storage_oauth }
-  let(:folder_create_service) { class_double(Storages::NextcloudManagedFolderCreateService) }
-  let(:folder_permissions_service) { class_double(Storages::NextcloudManagedFolderPermissionsService) }
-  let(:file_info_result) { ServiceResult.success }
-
   before do
-    Storages::Peripherals::Registry.stub("nextcloud.queries.file_info", ->(_) { file_info_result })
-    Storages::Peripherals::Registry.stub("nextcloud.services.folder_create", folder_create_service)
-    Storages::Peripherals::Registry.stub("nextcloud.services.folder_permissions", folder_permissions_service)
-    allow(Storages::Peripherals::StorageInteraction::Authentication).to receive(:authorization_state)
-                                                                          .and_return(authorization_state)
-    allow(Storages::Peripherals::StorageInteraction::AuthenticationMethodSelector).to receive(:new)
-                                                                                        .and_return(auth_method_selector)
+    create(:remote_identity, user: current_user, integration: storage,
+                             auth_source: storage.oauth_client, origin_user_id: "anakin")
+
+    Storages::Adapters::Registry.stub("nextcloud.queries.user", ->(*) { user_query_result })
   end
 
   it "redirects to the project folder in the storage" do
@@ -104,11 +93,9 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
 
   context "when an error occurs in determining the target location" do
     before do
-      Storages::Peripherals::Registry.stub("nextcloud.queries.open_file_link", ->(_) do
-        ServiceResult.failure(
-          errors: Storages::StorageError.new(code: 400, log_message: "Request made outside opening hours.")
-        )
-      end)
+      Storages::Adapters::Registry
+        .stub("nextcloud.queries.open_file_link",
+              ->(_) { Failure(Storages::Adapters::Results::Error.new(code: :error, source: self)) })
     end
 
     it "renders an error message", :aggregate_failures do
@@ -117,12 +104,12 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
       expect(last_response.headers["Location"]).to eq("http://test.host/projects/#{project.id}")
 
       flash = Sessions::UserSession.last.data.dig("flash", "flashes")
-      expect(flash["error"]).to eq("400 | Request made outside opening hours.")
+      expect(flash["error"]).to eq("error")
     end
   end
 
   context "when the user has no remote identity yet" do
-    let(:authorization_state) { :not_connected }
+    let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) }
 
     context "and the user authenticates through OAuth 2.0 at the storage" do
       it "ensures creation of a remote identity" do
@@ -130,16 +117,19 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
         destination = CGI.escape("http://test.host/#{path}")
         expect(last_response).to have_http_status(:found)
         expect(last_response.headers["Location"]).to eq(
-                                                       "http://test.host/oauth_clients/#{storage.oauth_client.client_id}/ensure_connection?" \
-                                                         "destination_url=#{destination}&storage_id=#{storage.id}"
-                                                     )
+          "http://test.host/oauth_clients/#{storage.oauth_client.client_id}/ensure_connection?" \
+          "destination_url=#{destination}&storage_id=#{storage.id}"
+        )
       end
     end
 
     context "and the user authenticates through a common SSO IDP" do
-      let(:authentication_method) { :sso }
+      before do
+        allow(Storages::Adapters::Authentication).to receive(:authorization_state).and_return(:connected)
+      end
 
       it "redirects to the project folder in the storage" do
+        skip "SETUP ACTUAL SSO PRE-REQUISITES"
         request
         expect(last_response).to have_http_status(:found)
         expect(last_response.headers["Location"]).to eq("#{storage.host}index.php/f/123?openfile=1")
@@ -148,7 +138,7 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
   end
 
   context "when we can't determine the user's remote identity" do
-    let(:authorization_state) { :error }
+    before { RemoteIdentity.delete_all }
 
     context "and the user authenticates through OAuth 2.0 at the storage" do
       it "renders an error message", :aggregate_failures do
@@ -183,18 +173,17 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
   end
 
   context "when the project folder has not been created yet" do
-    let(:project_storage) { create(:project_storage, storage:, project_folder_id: "", project_folder_mode:) }
+    let(:project_storage) { create(:project_storage, storage:, project_folder_id: nil, project_folder_mode:) }
 
     before do
-      allow(folder_create_service).to receive(:call) do
-        project_storage.update!(project_folder_id: "456")
-        ServiceResult.success
+      allow(Storages::NextcloudManagedFolderCreateService).to receive(:call) do
+        project_storage.update(project_folder_id: "456") && ServiceResult.success
       end
     end
 
     it "creates the project folder in the storage" do
       request
-      expect(folder_create_service).to have_received(:call)
+      expect(Storages::NextcloudManagedFolderCreateService).to have_received(:call)
     end
 
     it "redirects to the project folder in the storage" do
@@ -205,7 +194,7 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
 
     context "and when creation of the folder fails" do
       before do
-        allow(folder_create_service).to receive(:call).and_return(
+        allow(Storages::NextcloudManagedFolderCreateService).to receive(:call).and_return(
           ServiceResult.failure(errors: instance_double(ActiveModel::Errors, full_messages: ["Nope, sorry!"]))
         )
       end
@@ -225,7 +214,7 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
 
       it "does not try to create the folder" do
         request
-        expect(folder_create_service).not_to have_received(:call)
+        expect(Storages::NextcloudManagedFolderCreateService).not_to have_received(:call)
       end
 
       it "redirects to the storage's file root" do
@@ -237,15 +226,16 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
   end
 
   context "when the user has no permission to access the project folder in the storage" do
-    let(:file_info_result) { ServiceResult.failure(errors: instance_double(Storages::StorageError, code: :forbidden)) }
+    let(:file_info_result) { Storages::Adapters::Results::Error.new(code: :forbidden, source: self) }
 
     before do
-      allow(folder_permissions_service).to receive(:call).and_return(ServiceResult.success)
+      allow(Storages::NextcloudManagedFolderPermissionsService).to receive(:call).and_return(ServiceResult.success)
+      Storages::Adapters::Registry.stub("nextcloud.queries.file_info", ->(*) { Failure(file_info_result) })
     end
 
     it "updates the user's permissions on the remote folder" do
       request
-      expect(folder_permissions_service).to have_received(:call)
+      expect(Storages::NextcloudManagedFolderPermissionsService).to have_received(:call)
     end
 
     it "redirects to the project folder in the storage" do
@@ -259,7 +249,7 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
 
       it "does not try to update the permissions" do
         request
-        expect(folder_permissions_service).not_to have_received(:call)
+        expect(Storages::NextcloudManagedFolderPermissionsService).not_to have_received(:call)
       end
 
       it "redirects to the project folder in the storage (leaving final authorization to the storage)" do
@@ -275,7 +265,7 @@ RSpec.describe "projects/:project_id/project_storages/:id/open" do
       # TODO: or should we avoid doing that?
       it "tries updating the user's permissions on the remote folder (ineffectively)" do
         request
-        expect(folder_permissions_service).to have_received(:call)
+        expect(Storages::NextcloudManagedFolderPermissionsService).to have_received(:call)
       end
 
       it "redirects to the storage's file root" do

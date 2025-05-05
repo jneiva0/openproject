@@ -45,6 +45,8 @@ module Storages
           AuthenticationStrategies::OAuthUserToken.new(auth.user)
         when :oauth_client_credentials
           AuthenticationStrategies::OAuthClientCredentials.new(auth.use_cache)
+        when :sso_user_token
+          AuthenticationStrategies::SsoUserToken.new(auth.user)
         else
           raise Errors::UnknownAuthenticationStrategy, "Unknown #{auth.key} authentication scheme"
         end

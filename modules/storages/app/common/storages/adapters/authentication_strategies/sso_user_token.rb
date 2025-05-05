@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+# frozen_string_literal:true
 
 #-- copyright
 # OpenProject is an open source project management software.
@@ -30,14 +30,24 @@
 
 module Storages
   module Adapters
-    module Results
-      StorageFileCollection = Data.define(:files, :parent, :ancestors) do
-        def self.build(files:, parent:, ancestors:, contract: StorageFileCollectionContract.new)
-          contract.call(files:, parent:, ancestors:).to_monad.fmap { |it| new(**it.to_h) }
+    module AuthenticationStrategies
+      class SsoUserToken < AuthenticationStrategy
+        def initialize(user)
+          @user = user
         end
 
-        def all_folders
-          files.filter(&:folder?)
+        def call(storage:, http_options: {}, &)
+          result = OpenIDConnect::UserTokens::FetchService.new(user: @user).access_token_for(audience: storage.audience)
+
+          token = result.value_or do
+            log_message = "Failed to fetch access token for user #{@user}. Error: #{it.inspect}"
+            error(log_message)
+
+            return Failure(error.with(code: :unauthorized))
+          end
+
+          opts = http_options.deep_merge({ headers: { "Authorization" => "Bearer #{token}" } })
+          yield OpenProject.httpx.with(opts)
         end
       end
     end

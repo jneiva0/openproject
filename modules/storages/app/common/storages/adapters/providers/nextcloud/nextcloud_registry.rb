@@ -35,7 +35,7 @@ module Storages
         NextcloudRegistry = Dry::Container::Namespace.new("nextcloud") do
           namespace("authentication") do
             register(:userless, ->(*) { Input::Strategy.build(key: :basic_auth) })
-            register(:user_bound, ->(user, storage = nil) { Input::Strategy.build(key: :oauth_user_token, user:, storage:) })
+            register(:user_bound, UserBoundAuthentication)
           end
 
           namespace("commands") do
@@ -68,6 +68,12 @@ module Storages
             register(:open_storage, Queries::OpenStorageQuery)
             register(:upload_link, Queries::UploadLinkQuery)
             register(:user, Queries::UserQuery)
+          end
+
+          # Move Services to the Providers folder.
+          namespace("services") do
+            register(:upkeep_managed_folders, NextcloudManagedFolderCreateService)
+            register(:upkeep_managed_folder_permissions, NextcloudManagedFolderPermissionsService)
           end
 
           namespace("validators") do

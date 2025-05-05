@@ -34,57 +34,46 @@ module Storages
 
     FILE_PERMISSIONS = OpenProject::Storages::Engine.external_file_permissions
 
-    def self.i18n_key = "nextcloud_sync_service"
-
     class << self
+      def i18n_key = "nextcloud_sync_service"
+
       def call(storage:, project_storages_scope: nil)
         new(storage:, project_storages_scope:).call
       end
     end
 
+    delegate :group_user, :group, :username, to: :@storage, private: true
+
     def initialize(storage:, project_storages_scope: nil)
       super()
       @storage = storage
       @project_storages = project_storages_scope || storage.project_storages
+      setup_commands
     end
 
     def call
       with_tagged_logger([self.class.name, "storage-#{@storage.id}"]) do
-        apply_permissions_to_folders
-        epilogue
+        apply_permissions_to_folders.bind { add_remove_users_to_group }
+        @result
       end
     end
 
     private
 
-    def epilogue
-      @result
-    end
-
     def apply_permissions_to_folders
       info "Setting permissions to project folders"
       remote_admins = admin_remote_identities.pluck(:origin_user_id)
 
-      @project_storages
-        .active
-        .automatic
-        .with_project_folder
-        .order(:project_folder_id)
-        .find_each do |project_storage|
-          set_folder_permissions(remote_admins, project_storage)
-        end
+      @project_storages.active.automatic.with_project_folder.order(:project_folder_id).find_each do |project_storage|
+        set_folder_permissions(remote_admins, project_storage)
+      end
 
-      info "Updating user access on automatically managed project folders"
-      add_remove_users_to_group(@storage.group, @storage.username)
-
-      ServiceResult.success
+      Success(:folder_permissions)
     end
 
-    def add_remove_users_to_group(group, username)
-      remote_users = remote_group_users.result_or do |error|
-        log_storage_error(error, group:)
-        return add_error(:remote_group_users, error, options: { group: }).fail!
-      end
+    def add_remove_users_to_group
+      info "Updating user access on automatically managed project folders"
+      remote_users = remote_group_users.value_or { return Failure() }
 
       local_users = remote_identities.order(:id).pluck(:origin_user_id)
 
@@ -93,28 +82,30 @@ module Storages
     end
 
     def add_users_to_remote_group(users_to_add)
-      group = @storage.group
-
       users_to_add.each do |user|
-        add_user_to_group.call(storage: @storage, auth_strategy:, user:, group:).error_and do |error|
-          add_error(:add_user_to_group, error, options: { user:, group:, reason: error.log_message })
-          log_storage_error(error, group:, user:, reason: error.log_message)
+        input_data = Adapters::Input::AddUserToGroup.build(group:, user:).value_or do |error|
+          next add_validation_error(error)
+        end
+
+        @commands[:add_user_to_group].call(auth_strategy:, input_data:).or do |error|
+          add_error(:add_user_to_group, error, options: { user:, group: })
         end
       end
     end
 
     def remove_users_from_remote_group(users_to_remove)
-      group = @storage.group
-
       users_to_remove.each do |user|
-        remove_user_from_group.call(storage: @storage, auth_strategy:, user:, group:).error_and do |error|
+        input_data = Adapters::Input::RemoveUserFromGroup.build(group:, user:).value_or do |error|
+          add_validation_error(error, options: { user:, group: })
+          next
+        end
+
+        @commands[:remove_user_from_group].call(auth_strategy:, input_data:).or do |error|
           add_error(:remove_user_from_group, error, options: { user:, group:, reason: error.log_message })
-          log_storage_error(error, group:, user:, reason: error.log_message)
         end
       end
     end
 
-    # rubocop:disable Metrics/AbcSize
     def set_folder_permissions(remote_admins, project_storage)
       system_user = [{ user_id: @storage.username, permissions: FILE_PERMISSIONS }]
 
@@ -132,16 +123,12 @@ module Storages
 
       input_data = build_set_permissions_input_data(project_folder_id, permissions).value_or do |failure|
         log_validation_error(failure, project_folder_id:, permissions:)
-        return # rubocop:disable Lint/NonLocalExitFromIterator
       end
 
-      set_permissions.call(storage: @storage, auth_strategy:, input_data:).on_failure do |service_result|
-        log_storage_error(service_result.errors, folder: project_folder_id)
-        add_error(:set_folder_permission, service_result.errors, options: { folder: project_folder_id })
+      @commands[:set_permissions].call(auth_strategy:, input_data:).or do |error|
+        add_error(:set_folder_permission, error, options: { folder: project_folder_id })
       end
     end
-
-    # rubocop:enable Metrics/AbcSize
 
     def project_remote_identities(project_storage)
       user_remote_identities = remote_identities.where.not(id: admin_remote_identities).order(:id)
@@ -154,12 +141,18 @@ module Storages
     end
 
     def build_set_permissions_input_data(file_id, user_permissions)
-      Peripherals::StorageInteraction::Inputs::SetPermissions.build(file_id:, user_permissions:)
+      Adapters::Input::SetPermissions.build(file_id:, user_permissions:)
     end
 
     def remote_group_users
-      info "Retrieving users that are part of the #{@storage.group} group"
-      group_users.call(storage: @storage, auth_strategy:, group: @storage.group)
+      info "Retrieving users that are part of the #{group} group"
+      input_data = Adapters::Input::GroupUsers.build(group:).value_or do
+        return Failure(add_validation_error(it, options: { group: }))
+      end
+
+      @commands[:group_users].call(auth_strategy:, input_data:).or do |error|
+        Failure(add_error(:group_users, error, options: { group: group }))
+      end
     end
 
     ### Model Scopes
@@ -172,18 +165,15 @@ module Storages
       remote_identities.where(user: User.admin.active)
     end
 
-    def set_permissions = Peripherals::Registry.resolve("nextcloud.commands.set_permissions")
-
-    def add_user_to_group = Peripherals::Registry.resolve("nextcloud.commands.add_user_to_group")
-
-    def remove_user_from_group = Peripherals::Registry.resolve("nextcloud.commands.remove_user_from_group")
-
-    def group_users = Peripherals::Registry.resolve("nextcloud.queries.group_users")
-
-    def userless = Peripherals::Registry.resolve("nextcloud.authentication.userless")
-
     def auth_strategy
-      @auth_strategy ||= userless.call
+      @auth_strategy ||= Adapters::Registry.resolve("nextcloud.authentication.userless").call
+    end
+
+    def setup_commands
+      @commands = %w[nextcloud.commands.set_permissions nextcloud.commands.remove_user_from_group
+                     nextcloud.commands.add_user_to_group nextcloud.queries.group_users].to_h do |key|
+        [key.split(".").last.to_sym, Adapters::Registry[key].new(@storage)]
+      end
     end
   end
 end

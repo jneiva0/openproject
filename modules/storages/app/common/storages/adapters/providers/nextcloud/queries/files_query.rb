@@ -199,8 +199,8 @@ module Storages
               # Nextcloud Dav permissions:
               # https://github.com/nextcloud/server/blob/66648011c6bc278ace57230db44fd6d63d67b864/lib/public/Files/DavUtil.php
               result = []
-              result << :readable if permissions_string.include?("G")
-              result << :writeable if permissions_string.match?(/W|CK/)
+              result << :readable if permissions_string&.include?("G")
+              result << :writeable if permissions_string&.match?(/W|CK/)
               result
             end
           end
