@@ -77,7 +77,8 @@ module API
                                      allowed_user_href
                                    }
 
-          schema_with_allowed_link :work_package,
+          # TODO: also factory needed here?
+          schema_with_allowed_link :entity,
                                    has_default: false,
                                    required: false,
                                    href_callback: ->(*) {
