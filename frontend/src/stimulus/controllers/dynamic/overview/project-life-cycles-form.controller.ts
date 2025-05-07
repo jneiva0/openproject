@@ -81,7 +81,7 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
   private updateFlatpickrCalendar() {
     const dates:Date[] = _.compact(this.dateInputFields.map((field) => this.toDate(field.value)));
     const ignoreNonWorkingDays = false;
-    const mode = this.mode;
+    const mode = 'range';
 
     document.dispatchEvent(
       new CustomEvent('date-picker:flatpickr-set-values', {
@@ -94,31 +94,19 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
     );
   }
 
-  private get mode():'single'|'range' {
-    return 'range';
-  }
-
-  highlightField(field:HTMLInputElement) {
-    this.clearHighLight();
-    field.classList.add('op-datepicker-modal--date-field_current');
-    this.updateFlatpickrCalendar();
-    window.setTimeout(() => {
-      // For mobile, we have to make sure that the active field is scrolled into view after the keyboard is opened
-      field.scrollIntoView(true);
-    }, 300);
-  }
-
   handleFlatpickrDatesChanged(event:CustomEvent<{ dates:Date[] }>) {
     const dates = event.detail.dates;
 
     if (dates.length === 1) {
       if ((this.highlightedField === this.finishDateTarget) || this.startDateTarget.disabled) {
         this.finishDateTarget.value = this.dateToIso(dates[0]);
-        if (this.startDateTarget.disabled) {
-          this.clearHighLight();
+        if (!this.startDateTarget.value) {
+          this.highlightField(this.startDateTarget);
         }
       } else {
         this.startDateTarget.value = this.dateToIso(dates[0]);
+        this.finishDateTarget.value = '';
+        this.highlightField(this.finishDateTarget);
       }
     } else {
       this.dateInputFields
@@ -129,6 +117,7 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
         });
       this.clearHighLight();
     }
+
     this.updateFlatpickrCalendar();
     this.previewForm();
   }
@@ -154,6 +143,21 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
     );
 
     return field;
+  }
+
+  private highlightField(field:HTMLInputElement) {
+    this.clearHighLight();
+
+    if (field.disabled) {
+      return;
+    }
+
+    field.classList.add('op-datepicker-modal--date-field_current');
+    this.updateFlatpickrCalendar();
+    window.setTimeout(() => {
+      // For mobile, we have to make sure that the active field is scrolled into view after the keyboard is opened
+      field.scrollIntoView(true);
+    }, 300);
   }
 
   private clearHighLight() {

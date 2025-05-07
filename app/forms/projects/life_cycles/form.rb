@@ -67,7 +67,8 @@ module Projects::LifeCycles
         caption:,
         value:,
         data: data.merge("overview--project-life-cycles-form-target": "startDate assignable"),
-        show_clear_button: value.present? && !disabled
+        show_clear_button: value.present? && !disabled,
+        clear_button_id: "start_date_clear_button"
       }
       form.text_field **datepicker_attributes, **input_attributes
     end
@@ -81,7 +82,8 @@ module Projects::LifeCycles
         autofocus: autofocus?(:finish_date),
         value:,
         data: data.merge("overview--project-life-cycles-form-target": "finishDate assignable"),
-        show_clear_button: value.present?
+        show_clear_button: value.present?,
+        clear_button_id: "finish_date_clear_button"
       }
       form.text_field **datepicker_attributes, **input_attributes
     end
