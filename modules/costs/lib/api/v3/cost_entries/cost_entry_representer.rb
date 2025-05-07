@@ -39,9 +39,9 @@ module API
         associated_resource :cost_type
 
         # for now not embedded, because work packages are quite large
-        associated_resource :work_package,
-                            getter: ->(*) {},
-                            link_title_attribute: :subject
+        associated_resource :entity,
+                            getter: ::API::V3::CostEntries::EntityRepresenterFactory.create_getter_lambda(:entity),
+                            link: ::API::V3::CostEntries::EntityRepresenterFactory.create_link_lambda(:entity)
 
         property :id, render_nil: true
         property :units, as: :spentUnits
