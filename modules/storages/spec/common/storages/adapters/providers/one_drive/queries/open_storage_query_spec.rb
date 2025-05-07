@@ -40,7 +40,7 @@ module Storages
             let(:user) { create(:user) }
             let(:storage) { create(:sharepoint_dev_drive_storage, oauth_client_token_user: user) }
             let(:auth_strategy) do
-              Registry["one_drive.authentication.user_bound"].call(user)
+              Registry["one_drive.authentication.user_bound"].call(user, storage)
             end
 
             subject { described_class.new(storage) }

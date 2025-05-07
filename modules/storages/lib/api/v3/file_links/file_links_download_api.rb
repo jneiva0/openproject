@@ -35,7 +35,7 @@ class API::V3::FileLinks::FileLinksDownloadAPI < API::OpenProjectAPI
   helpers do
     def auth_strategy
       storage = @file_link.storage
-      Storages::Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(user: User.current, storage:)
+      Storages::Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(current_user, storage)
     end
   end
 

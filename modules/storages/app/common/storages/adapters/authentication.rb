@@ -31,40 +31,57 @@
 module Storages
   module Adapters
     class Authentication
-      # @param strategy [Input::Strategy]
-      # @return [AuthenticationStrategy]
-      def self.[](strategy)
-        auth = strategy.value_or { |it| raise ArgumentError, "Invalid authentication strategy '#{it.inspect}'" }
+      class << self
+        # @param strategy [Input::Strategy]
+        # @return [AuthenticationStrategy]
+        # rubocop:disable Metrics/AbcSize
+        def [](strategy)
+          auth = strategy.value_or { |it| raise ArgumentError, "Invalid authentication strategy '#{it.inspect}'" }
 
-        case auth.key
-        when :noop
-          AuthenticationStrategies::Noop.new
-        when :basic_auth
-          AuthenticationStrategies::BasicAuth.new
-        when :oauth_user_token
-          AuthenticationStrategies::OAuthUserToken.new(auth.user)
-        when :oauth_client_credentials
-          AuthenticationStrategies::OAuthClientCredentials.new(auth.use_cache)
-        when :sso_user_token
-          AuthenticationStrategies::SsoUserToken.new(auth.user)
-        else
-          raise Errors::UnknownAuthenticationStrategy, "Unknown #{auth.key} authentication scheme"
+          case auth.key
+          when :noop
+            AuthenticationStrategies::Noop.new
+          when :basic_auth
+            AuthenticationStrategies::BasicAuth.new
+          when :bearer_token
+            AuthenticationStrategies::BearerToken.new(auth.token)
+          when :oauth_user_token
+            AuthenticationStrategies::OAuthUserToken.new(auth.user)
+          when :oauth_client_credentials
+            AuthenticationStrategies::OAuthClientCredentials.new(auth.use_cache)
+          when :sso_user_token
+            AuthenticationStrategies::SsoUserToken.new(auth.user)
+          else
+            raise Errors::UnknownAuthenticationStrategy, "Unknown #{auth.key} authentication scheme"
+          end
         end
-      end
+        # rubocop:enable Metrics/AbcSize
 
-      # TODO: Needs update for OIDC. Add tests for this.
-      #   Used only on the API. Should it become a service? - 2025-01-15 @mereghost
-      def self.authorization_state(storage:, user:)
-        return :not_connected if RemoteIdentity.where(integration: storage, user:).none?
+        # TODO: Needs update for OIDC. Add tests for this.
+        #   Used only on the API. Should it become a service? - 2025-01-15 @mereghost
+        def authorization_state(storage:, user:)
+          auth_strategy = Registry["#{storage}.authentication.user_bound"].call(user, storage)
 
-        auth_strategy = Registry["#{storage}.authentication.user_bound"].call(user, storage)
+          Registry.resolve("#{storage}.queries.user")
+                  .call(storage:, auth_strategy:)
+                  .either(
+                    ->(*) { :connected },
+                    ->(error) { handle_error(error) }
+                  )
+        end
 
-        Registry.resolve("#{storage}.queries.user")
-                .call(storage:, auth_strategy:)
-                .either(
-                  ->(*) { :connected },
-                  ->(error) { error.code == :unauthorized ? :failed_authorization : :error }
-                )
+        private
+
+        def handle_error(error)
+          case error.code
+          when :unauthorized
+            :failed_authorization
+          when :missing_token
+            :not_connected
+          else
+            :error
+          end
+        end
       end
     end
   end

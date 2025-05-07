@@ -118,16 +118,6 @@ RSpec.describe API::V3::Storages::StorageRepresenter, "rendering" do
           let(:title) { "Error" }
         end
       end
-
-      context "if there is no remote identity for the user at the storage" do
-        let(:remote_identity) { nil }
-
-        it_behaves_like "has a titled link" do
-          let(:link) { "authorizationState" }
-          let(:href) { "urn:openproject-org:api:v3:storages:authorization:NotConnected" }
-          let(:title) { "Not connected" }
-        end
-      end
     end
 
     describe "prepareUpload" do

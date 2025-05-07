@@ -57,7 +57,7 @@ RSpec.describe "API v3 storages resource", :storage_server_helpers, :webmock, co
   end
 
   shared_examples_for "successful storage response" do |as_admin: false|
-    include_examples "successful response"
+    it_behaves_like "successful response"
 
     describe "response body" do
       subject { last_response.body }
@@ -281,32 +281,26 @@ RSpec.describe "API v3 storages resource", :storage_server_helpers, :webmock, co
         before { create(:remote_identity, user: current_user, integration: storage) }
 
         context "when authorization succeeds and storage is connected" do
-          include_examples "a storage authorization result",
-                           expected: API::V3::Storages::URN_CONNECTION_CONNECTED,
-                           has_authorize_link: false
+          it_behaves_like "a storage authorization result",
+                          expected: API::V3::Storages::URN_CONNECTION_CONNECTED,
+                          has_authorize_link: false
         end
 
         context "when authorization fails" do
           let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) }
 
-          include_examples "a storage authorization result",
-                           expected: API::V3::Storages::URN_CONNECTION_AUTH_FAILED,
-                           has_authorize_link: true
+          it_behaves_like "a storage authorization result",
+                          expected: API::V3::Storages::URN_CONNECTION_AUTH_FAILED,
+                          has_authorize_link: true
         end
 
         context "when authorization fails with an error" do
           let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :error, source: self)) }
 
-          include_examples "a storage authorization result",
-                           expected: API::V3::Storages::URN_CONNECTION_ERROR,
-                           has_authorize_link: false
+          it_behaves_like "a storage authorization result",
+                          expected: API::V3::Storages::URN_CONNECTION_ERROR,
+                          has_authorize_link: false
         end
-      end
-
-      context "when user has no remote identity for the storage" do
-        include_examples "a storage authorization result",
-                         expected: API::V3::Storages::URN_CONNECTION_NOT_CONNECTED,
-                         has_authorize_link: true
       end
     end
   end

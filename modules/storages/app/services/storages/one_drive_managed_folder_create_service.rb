@@ -49,10 +49,10 @@ module Storages
 
     def call
       with_tagged_logger([self.class.name, "storage-#{@storage.id}"]) do
-        existing_remote_folders = remote_folders_map(@storage.drive_id).value_or { return @result }
-
-        ensure_folders_exist(existing_remote_folders).on_success do
-          hide_inactive_folders(existing_remote_folders) if @hide_missing_folders
+        remote_folders_map(@storage.drive_id).bind do |existing_remote_folders|
+          ensure_folders_exist(existing_remote_folders).bind do
+            hide_inactive_folders(existing_remote_folders) if @hide_missing_folders
+          end
         end
 
         @result
@@ -87,9 +87,8 @@ module Storages
       build_permissions_input_data(item_id, [])
         .either(
           ->(input_data) do
-            @commands[:set_permissions].call(auth_strategy:, input_data:).or do |error|
-              log_adapter_error(error, item_id:, context: "hide_folder")
-              add_error(:hide_inactive_folders, error, options: { path: folder_map[item_id] })
+            set_permissions.call(auth_strategy:, input_data:).or do |error|
+              add_error(:hide_inactive_folders, error, options: { context: "hide folders", path: folder_map[item_id] })
             end
           end,
           ->(failure) { log_validation_error(failure, item_id:, context: "hide_folder") }
@@ -108,8 +107,7 @@ module Storages
       folder_id = project_storage.project_folder_id
 
       Adapters::Input::RenameFile.build(location: folder_id, new_name: actual_path).bind do |input_data|
-        @commands[:rename_file].call(auth_strategy:, input_data:).or do |error|
-          log_adapter_error(error, folder_id:, folder_name: actual_path)
+        rename_file.call(auth_strategy:, input_data:).or do |error|
           add_error(
             :rename_project_folder, error,
             options: { current_path: current_folder_name, project_folder_name: actual_path, project_folder_id: folder_id }
@@ -119,14 +117,14 @@ module Storages
     end
 
     def create_remote_folder(folder_name, project_storage_id)
-      input_data = Adapters::Input::CreateFolder.build(folder_name:, parent_location: "/").value_or do |it|
+      input_data = Adapters::Input::CreateFolder.build(folder_name:, parent_location: "/").value_or do
         log_validation_error(it, folder_name: folder_name, parent_location: "/")
-        return Failure(it)
+        return Failure()
       end
 
-      folder_info = @commands[:create_folder].call(auth_strategy:, input_data:).value_or do |error|
-        log_adapter_error(error, folder_name:)
-        return add_error(:create_folder, error, options: { folder_name:, parent_location: "/" })
+      folder_info = create_folder.call(auth_strategy:, input_data:).value_or do |error|
+        add_error(:create_folder, error, options: { folder_name:, parent_location: "/" })
+        return Failure()
       end
 
       last_project_folder = LastProjectFolder.find_by(project_storage_id:, mode: :automatic)
@@ -152,25 +150,18 @@ module Storages
         return Failure()
       end
 
-      file_list = @commands[:files].call(auth_strategy:, input_data:).value_or do |error|
-        log_adapter_error(error, { drive_id: })
+      file_list = files.call(auth_strategy:, input_data:).value_or do |error|
         add_error(:remote_folders, error, options: { drive_id: })
         return Failure()
       end
 
-      Success(filter_folders_from(file_list.files))
+      filter_folders_from(file_list)
     end
 
     def filter_folders_from(files)
-      folders = files.each_with_object({}) do |file, hash|
-        next unless file.folder?
-
-        hash[file.id] = file.name
-      end
-
-      info "Found #{folders.size} folders. Map: #{folders}"
-
-      folders
+      folder_map = files.all_folders.to_h { [it.id, it.name] }
+      info "Found #{folder_map.size} folders. Map: #{folder_map}"
+      Success(folder_map)
     end
 
     def root_folder = "/"

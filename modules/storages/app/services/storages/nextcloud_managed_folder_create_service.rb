@@ -183,7 +183,6 @@ module Storages
       end
 
       @commands[:file_path_to_id_map].call(auth_strategy:, input_data:).alt_map do |error|
-        p error
         add_error(:remote_folders, error, options: { group_folder:, username: })
         error
       end

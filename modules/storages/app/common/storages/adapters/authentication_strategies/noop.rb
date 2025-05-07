@@ -32,11 +32,9 @@ module Storages
   module Adapters
     module AuthenticationStrategies
       class Noop < AuthenticationStrategy
-        # rubocop:disable Lint/UnusedMethodArgument
-        def call(storage:, http_options: {})
+        def call(http_options: {}, **)
           yield OpenProject.httpx.with(http_options)
         end
-        # rubocop:enable Lint/UnusedMethodArgument
       end
     end
   end

@@ -42,7 +42,7 @@ module Storages
               create(:nextcloud_storage_with_local_connection, :as_not_automatically_managed, oauth_client_token_user: user)
             end
 
-            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user) }
+            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user, storage) }
             let(:depth) { Float::INFINITY }
             let(:input_data) { Input::FilePathToIdMap.build(folder:, depth:).value! }
 

@@ -34,14 +34,15 @@ class API::V3::FileLinks::FileLinksOpenAPI < API::OpenProjectAPI
   helpers do
     def auth_strategy
       storage = @file_link.storage
-      Storages::Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(user: current_user, storage:)
+      Storages::Adapters::Registry.resolve("#{storage}.authentication.user_bound").call(current_user, storage)
     end
   end
 
   resources :open do
     get do
-      input_data = Storages::Adapters::Input::OpenFileLink.build(file_id: @file_link.origin_id, open_location: params[:location])
-                                                    .value_or { raise_error(it) }
+      input_data = Storages::Adapters::Input::OpenFileLink
+                     .build(file_id: @file_link.origin_id, open_location: params[:location])
+                     .value_or { raise_error(it) }
 
       Storages::Adapters::Registry.resolve("#{@file_link.storage}.queries.open_file_link")
         .call(storage: @file_link.storage, auth_strategy:, input_data:)

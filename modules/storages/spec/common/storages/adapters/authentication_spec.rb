@@ -40,6 +40,7 @@ module Storages
       let(:basic_auth) { Input::Strategy.build(key: :basic_auth) }
       let(:oauth_client_credentials) { Input::Strategy.build(key: :oauth_client_credentials, use_cache: false) }
       let(:oauth_user_token) { Input::Strategy.build(key: :oauth_user_token, user:) }
+      let(:sso_user_token) { Input::Strategy.build(key: :sso_user_token, user:) }
 
       subject(:auth) { described_class }
 
@@ -48,6 +49,7 @@ module Storages
         expect(auth[basic_auth]).to be_a(AuthenticationStrategies::BasicAuth)
         expect(auth[oauth_client_credentials]).to be_a(AuthenticationStrategies::OAuthClientCredentials)
         expect(auth[oauth_user_token]).to be_a(AuthenticationStrategies::OAuthUserToken)
+        expect(auth[sso_user_token]).to be_a(AuthenticationStrategies::SsoUserToken)
       end
 
       it "returns an error if an unknown strategy is requested" do

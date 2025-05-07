@@ -32,13 +32,14 @@ module Storages
   module Adapters
     module Input
       class StrategyContract < Dry::Validation::Contract
-        AUTH_METHODS = %i[noop basic_auth oauth_client_credentials oauth_user_token sso_user_token].to_set.freeze
+        AUTH_METHODS = %i[noop basic_auth oauth_client_credentials oauth_user_token sso_user_token bearer_token].to_set.freeze
 
         params do
           required(:key).filled(:symbol, included_in?: AUTH_METHODS)
           optional(:user).maybe(type?: User)
           optional(:storage).maybe(type?: Storage)
           optional(:use_cache).maybe(:bool)
+          optional(:token).maybe(:string)
         end
       end
     end

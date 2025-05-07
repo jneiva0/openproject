@@ -75,7 +75,7 @@ module Storages
             expect(result).to be_failure
 
             error = result.failure
-            expect(error.code).to eq(:unauthorized)
+            expect(error.code).to eq(:missing_token)
             expect(error.source).to be(described_class)
           end
         end

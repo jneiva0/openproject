@@ -95,7 +95,7 @@ module Storages
       end
 
       def validator
-        @validator ||= Peripherals::Registry.resolve("#{@storage}.validators.connection").new(@storage)
+        @validator ||= Adapters::Registry.resolve("#{@storage}.validators.connection").new(@storage)
       end
     end
   end

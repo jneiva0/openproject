@@ -45,7 +45,7 @@ module Storages
                      origin_user_id: "m.jade@death.star")
             end
 
-            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user) }
+            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user, storage) }
             let(:input_data) { Input::Files.build(folder:).value! }
 
             it_behaves_like "adapter files_query: basic query setup"

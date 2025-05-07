@@ -75,6 +75,9 @@ RSpec.describe "GET /projects/:project_id/settings/project_storages/:id/oauth_ac
       before do
         allow(SecureRandom).to receive(:uuid).and_call_original.ordered
         allow(SecureRandom).to receive(:uuid).and_return(nonce).ordered
+        Storages::Adapters::Registry
+          .stub("nextcloud.queries.user",
+                ->(_) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) })
       end
 
       it "redirects to storage authorization_uri with oauth_state_* cookie set" do
@@ -84,7 +87,7 @@ RSpec.describe "GET /projects/:project_id/settings/project_storages/:id/oauth_ac
         )
         expect(last_response).to have_http_status(:found)
         expect(last_response.location).to eq(
-          "#{storage.host}/index.php/apps/oauth2/authorize?client_id=#{storage.oauth_client.client_id}&" \
+          "#{storage.host}index.php/apps/oauth2/authorize?client_id=#{storage.oauth_client.client_id}&" \
           "redirect_uri=#{redirect_uri}&response_type=code&state=#{nonce}"
         )
 

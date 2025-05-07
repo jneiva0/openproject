@@ -41,7 +41,7 @@ module Storages
             let(:storage) do
               create(:nextcloud_storage_with_local_connection, :as_not_automatically_managed, oauth_client_token_user: user)
             end
-            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user) }
+            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user, storage) }
 
             it_behaves_like "adapter upload_link_query: basic query setup"
 

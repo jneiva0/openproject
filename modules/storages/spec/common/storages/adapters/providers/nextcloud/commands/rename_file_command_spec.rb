@@ -42,7 +42,7 @@ module Storages
               create(:nextcloud_storage_with_local_connection, :as_not_automatically_managed, oauth_client_token_user: user)
             end
 
-            let(:auth_strategy) { Registry.resolve("nextcloud.authentication.user_bound").call(user) }
+            let(:auth_strategy) { Registry.resolve("nextcloud.authentication.user_bound").call(user, storage) }
             let(:input_data) { Input::RenameFile.build(location: file_id, new_name: name).value! }
 
             it_behaves_like "adapter rename_file_command: basic command setup"

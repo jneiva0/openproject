@@ -49,6 +49,9 @@ module Storages
             alias_method :app_enabled?, :app_enabled
             alias_method :group_folder_enabled?, :group_folder_enabled
 
+            def app_disabled? = !app_enabled?
+            def group_folder_disabled? = !group_folder_enabled?
+
             def with(...)
               args = to_h.merge(...)
               self.class.build(**args).either(-> { it }, -> { raise ArgumentError, it.errors })

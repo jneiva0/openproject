@@ -65,6 +65,10 @@ module Storages
             register(:upload_link, Queries::UploadLinkQuery)
             register(:user, Queries::UserQuery)
           end
+
+          namespace(:validators) do
+            register(:connection, Validators::ConnectionValidator)
+          end
         end
       end
     end

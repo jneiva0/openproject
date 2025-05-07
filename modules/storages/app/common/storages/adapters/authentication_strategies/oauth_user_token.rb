@@ -107,7 +107,7 @@ module Storages
 
         def current_token(client)
           token = OAuthClientToken.find_by(user: @user, oauth_client: client)
-          token ? Success(token) : Failure(@error_data.with(code: :unauthorized))
+          token ? Success(token) : Failure(@error_data.with(code: :missing_token))
         end
       end
     end

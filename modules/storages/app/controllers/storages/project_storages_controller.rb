@@ -55,9 +55,9 @@ class Storages::ProjectStoragesController < ApplicationController
 
   def ensure_remote_identity
     case Storages::Adapters::Authentication.authorization_state(storage:, user: current_user)
-    when :not_connected, :failed_authorization
+    when :not_connected
       redirect_to ensure_connection_url
-    when :error
+    when :error, :failed_authorization
       show_error(I18n.t("project_storages.open.remote_identity_error"))
     else
       true

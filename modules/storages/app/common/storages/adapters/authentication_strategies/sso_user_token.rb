@@ -43,7 +43,7 @@ module Storages
             log_message = "Failed to fetch access token for user #{@user}. Error: #{it.inspect}"
             error(log_message)
 
-            return Failure(error.with(code: :unauthorized))
+            return Failure(it.with(code: :unauthorized))
           end
 
           opts = http_options.deep_merge({ headers: { "Authorization" => "Bearer #{token}" } })

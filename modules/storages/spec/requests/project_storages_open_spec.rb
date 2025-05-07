@@ -41,7 +41,7 @@ RSpec.describe "projects/:project_id/project_storages/:id/open", :webmock do
 
   let(:path) { "projects/#{project.identifier}/project_storages/#{project_storage.id}/open" }
   let(:permissions) { %i[view_file_links read_files] }
-  let(:user_query_result) { Success() }
+  let(:user_query_result) { Success(:i_am_authorized) }
 
   current_user { create(:user, member_with_permissions: { project => permissions }) }
 
@@ -50,9 +50,6 @@ RSpec.describe "projects/:project_id/project_storages/:id/open", :webmock do
   end
 
   before do
-    create(:remote_identity, user: current_user, integration: storage,
-                             auth_source: storage.oauth_client, origin_user_id: "anakin")
-
     Storages::Adapters::Registry.stub("nextcloud.queries.user", ->(*) { user_query_result })
   end
 
@@ -108,8 +105,8 @@ RSpec.describe "projects/:project_id/project_storages/:id/open", :webmock do
     end
   end
 
-  context "when the user has no remote identity yet" do
-    let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) }
+  context "when the user has no current token" do
+    let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :missing_token, source: self)) }
 
     context "and the user authenticates through OAuth 2.0 at the storage" do
       it "ensures creation of a remote identity" do
@@ -124,23 +121,29 @@ RSpec.describe "projects/:project_id/project_storages/:id/open", :webmock do
     end
 
     context "and the user authenticates through a common SSO IDP" do
-      before do
-        allow(Storages::Adapters::Authentication).to receive(:authorization_state).and_return(:connected)
+      let(:oidc_provider) { create(:oidc_provider, :token_exchange_capable) }
+      let(:storage) { create(:nextcloud_storage, :oidc_sso_enabled) }
+
+      let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) }
+
+      current_user do
+        create(:user, authentication_provider: oidc_provider, member_with_permissions: { project => permissions })
       end
 
       it "redirects to the project folder in the storage" do
-        skip "SETUP ACTUAL SSO PRE-REQUISITES"
         request
         expect(last_response).to have_http_status(:found)
-        expect(last_response.headers["Location"]).to eq("#{storage.host}index.php/f/123?openfile=1")
+        expect(last_response.headers["Location"]).to eq("http://test.host/projects/#{project.id}")
+        flash = Sessions::UserSession.last.data.dig("flash", "flashes")
+        expect(flash["error"]).to be_present
       end
     end
   end
 
-  context "when we can't determine the user's remote identity" do
-    before { RemoteIdentity.delete_all }
-
+  context "when we can't authenticate the user" do
     context "and the user authenticates through OAuth 2.0 at the storage" do
+      let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) }
+
       it "renders an error message", :aggregate_failures do
         request
 
@@ -152,12 +155,20 @@ RSpec.describe "projects/:project_id/project_storages/:id/open", :webmock do
     end
 
     context "and the user authenticates through a common SSO IDP" do
-      let(:authentication_method) { :sso }
+      let(:oidc_provider) { create(:oidc_provider, :token_exchange_capable) }
+      let(:storage) { create(:nextcloud_storage, :oidc_sso_enabled) }
+      let(:user_query_result) { Failure(Storages::Adapters::Results::Error.new(code: :error, source: self)) }
 
-      it "redirects to the project folder in the storage (the check is never performed)" do
+      current_user do
+        create(:user, authentication_provider: oidc_provider, member_with_permissions: { project => permissions })
+      end
+
+      it "renders an error message" do
         request
         expect(last_response).to have_http_status(:found)
-        expect(last_response.headers["Location"]).to eq("#{storage.host}index.php/f/123?openfile=1")
+        expect(last_response.headers["Location"]).to eq("http://test.host/projects/#{project.id}")
+        flash = Sessions::UserSession.last.data.dig("flash", "flashes")
+        expect(flash["error"]).to be_present
       end
     end
   end

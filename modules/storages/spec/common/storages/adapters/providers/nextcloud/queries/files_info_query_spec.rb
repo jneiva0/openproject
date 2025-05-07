@@ -38,7 +38,7 @@ module Storages
         module Queries
           RSpec.describe FilesInfoQuery, :webmock do
             let(:user) { create(:user) }
-            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user) }
+            let(:auth_strategy) { Registry["nextcloud.authentication.user_bound"].call(user, storage) }
             let(:storage) do
               create(:nextcloud_storage_with_local_connection, :as_not_automatically_managed, oauth_client_token_user: user)
             end

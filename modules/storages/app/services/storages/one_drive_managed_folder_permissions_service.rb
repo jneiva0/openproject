@@ -61,12 +61,8 @@ module Storages
     # rubocop:disable Metrics/AbcSize
     def apply_permission_to_folders
       info "Setting permissions to project folders"
-      @project_storages.includes(:project)
-                                   .with_project_folder
-                                   .find_each do |project_storage|
-        permissions = admin_remote_identities_scope
-                        .pluck(:origin_user_id)
-                        .map do |origin_user_id|
+      @project_storages.includes(:project).with_project_folder.find_each do |project_storage|
+        permissions = admin_remote_identities_scope.pluck(:origin_user_id).map do |origin_user_id|
           { user_id: origin_user_id, permissions: [:write_files] }
         end
 
@@ -115,14 +111,11 @@ module Storages
       client_remote_identities_scope.where(user: User.admin.active)
     end
 
-    def set_permissions = Peripherals::Registry.resolve("one_drive.commands.set_permissions")
-
-    def userless = Peripherals::Registry.resolve("one_drive.authentication.userless")
-
-    def auth_strategy = userless.call
+    def set_permissions = Adapters::Registry.resolve("one_drive.commands.set_permissions")
+    def auth_strategy = Adapters::Registry.resolve("one_drive.authentication.userless").call
 
     def build_permissions_input_data(file_id, user_permissions)
-      Peripherals::StorageInteraction::Inputs::SetPermissions.build(file_id:, user_permissions:)
+      Adapters::Input::SetPermissions.build(file_id:, user_permissions:)
     end
   end
 end

@@ -32,6 +32,8 @@ module Storages
   module Adapters
     module Results
       StorageFileCollection = Data.define(:files, :parent, :ancestors) do
+        delegate :reject, to: :files
+
         def self.build(files:, parent:, ancestors:, contract: StorageFileCollectionContract.new)
           contract.call(files:, parent:, ancestors:).to_monad.fmap { |it| new(**it.to_h) }
         end

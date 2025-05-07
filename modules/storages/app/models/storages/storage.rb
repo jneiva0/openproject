@@ -230,13 +230,8 @@ module Storages
     end
 
     def extract_origin_user_id(token)
-      auth_strategy = ::Storages::Peripherals::Registry
-                        .resolve("#{self}.authentication.specific_bearer_token")
-                        .with_token(token.access_token)
-      ::Storages::Peripherals::Registry
-        .resolve("#{self}.queries.user")
-        .call(auth_strategy:, storage: self)
-        .map { |user| user[:id] } # rubocop:disable Rails/Pluck
+      auth_strategy = Adapters::Input::Strategy.build(key: :bearer_token, token: token.access_token)
+      Adapters::Registry.resolve("#{self}.queries.user").call(auth_strategy:, storage: self).fmap { it[:id] }
     end
   end
 end

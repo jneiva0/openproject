@@ -40,7 +40,7 @@ module Storages
             let(:user) { create(:user) }
             let(:storage) { create(:sharepoint_dev_drive_storage, oauth_client_token_user: user) }
             let(:file_id) { "01AZJL5PJTICED3C5YSVAY6NWTBNA2XERU" }
-            let(:auth_strategy) { Registry.resolve("one_drive.authentication.user_bound").call(user) }
+            let(:auth_strategy) { Registry.resolve("one_drive.authentication.user_bound").call(user, storage) }
             let(:input_data) { Input::OpenFileLink.build(file_id:).value! }
 
             subject { described_class.new(storage) }

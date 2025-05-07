@@ -31,11 +31,11 @@
 module Storages
   module Adapters
     module Input
-      Strategy = Data.define(:key, :user, :storage, :use_cache) do
+      Strategy = Data.define(:key, :user, :storage, :use_cache, :token) do
         private_class_method :new
 
-        def self.build(key:, user: nil, storage: nil, use_cache: true, contract: StrategyContract.new)
-          contract.call(key:, user:, use_cache:, storage:).to_monad.fmap { |result| new(**result.to_h) }
+        def self.build(key:, user: nil, storage: nil, use_cache: true, token: nil, contract: StrategyContract.new)
+          contract.call(key:, user:, use_cache:, storage:, token:).to_monad.fmap { |result| new(**result.to_h) }
         end
 
         def with_user(user)
@@ -44,6 +44,10 @@ module Storages
 
         def with_cache(use_cache)
           with(use_cache:)
+        end
+
+        def with_token(token)
+          with(token:)
         end
       end
     end
