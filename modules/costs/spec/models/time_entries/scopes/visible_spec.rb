@@ -42,14 +42,14 @@ RSpec.describe TimeEntry, "visible scope" do
   let!(:own_project_time_entry) do
     create(:time_entry,
            project:,
-           work_package:,
+           entity: work_package,
            hours: 2,
            user:)
   end
   let!(:project_time_entry) do
     create(:time_entry,
            project:,
-           work_package:,
+           entity: work_package,
            hours: 2,
            user: user2)
   end
