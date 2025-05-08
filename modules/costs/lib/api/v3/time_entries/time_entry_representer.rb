@@ -95,6 +95,7 @@ module API
 
         associated_resource :entity,
                             getter: ::API::V3::TimeEntries::EntityRepresenterFactory.create_getter_lambda(:entity),
+                            setter: ::API::V3::TimeEntries::EntityRepresenterFactory.create_setter_lambda(:entity),
                             link: ::API::V3::TimeEntries::EntityRepresenterFactory.create_link_lambda(:entity)
 
         # TODO: DEPRECATED!

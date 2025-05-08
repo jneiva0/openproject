@@ -36,7 +36,7 @@ module API
 
         ##
         # Create the appropriate subclass representer
-        # for each principal entity
+        # for each Entity
         def create(model, **args)
           representer_class(model).create(model, **args)
         end
@@ -89,6 +89,18 @@ module API
             next if instance.nil?
 
             ::API::V3::TimeEntries::EntityRepresenterFactory.create(instance, current_user:)
+          }
+        end
+
+        def create_setter_lambda(name, property_name: name, namespaces: %i(work_packages meetings))
+          ->(fragment:, **) {
+            ::API::Decorators::LinkObject
+              .new(represented,
+                   property_name:,
+                   namespace: namespaces,
+                   getter: :"#{name}_id",
+                   setter: :"#{name}_id=")
+              .from_hash(fragment)
           }
         end
       end
