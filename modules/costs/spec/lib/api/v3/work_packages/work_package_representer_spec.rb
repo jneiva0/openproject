@@ -46,7 +46,7 @@ RSpec.describe API::V3::WorkPackages::WorkPackageRepresenter do
 
   let(:cost_entry_1) do
     create(:cost_entry,
-           work_package:,
+           entity: work_package,
            project:,
            units: 3,
            spent_on: Time.zone.today,
@@ -55,7 +55,7 @@ RSpec.describe API::V3::WorkPackages::WorkPackageRepresenter do
   end
   let(:cost_entry_2) do
     create(:cost_entry,
-           work_package:,
+           entity: work_package,
            project:,
            units: 3,
            spent_on: Time.zone.today,
@@ -107,7 +107,7 @@ RSpec.describe API::V3::WorkPackages::WorkPackageRepresenter do
           let(:time_entry) do
             create(:time_entry,
                    project: work_package.project,
-                   work_package:,
+                   entity: work_package,
                    hours: 1.0)
           end
 
@@ -120,7 +120,7 @@ RSpec.describe API::V3::WorkPackages::WorkPackageRepresenter do
           let(:time_entry) do
             create(:time_entry,
                    project: work_package.project,
-                   work_package:,
+                   entity: work_package,
                    hours: 42.5)
           end
 
@@ -143,7 +143,7 @@ RSpec.describe API::V3::WorkPackages::WorkPackageRepresenter do
           let!(:own_time_entry) do
             create(:time_entry,
                    project: work_package.project,
-                   work_package:,
+                   entity: work_package,
                    hours: 2,
                    user: user2)
           end
@@ -151,7 +151,7 @@ RSpec.describe API::V3::WorkPackages::WorkPackageRepresenter do
           let!(:other_time_entry) do
             create(:time_entry,
                    project: work_package.project,
-                   work_package:,
+                   entity: work_package,
                    hours: 1,
                    user:)
           end

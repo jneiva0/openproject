@@ -49,11 +49,17 @@ module WorkPackages::Scopes::IncludeSpentTime
     def join_visible_time_entries
       wp_table
         .outer_join(visible_time_entries_cte)
-        .on(visible_time_entries_cte[:work_package_id].eq(wp_descendants[:id]))
+        .on(entity_join)
     end
 
     def allowed_to_view_time_entries(user)
-      TimeEntry.not_ongoing.visible(user).select(:id, :work_package_id, :hours).arel
+      TimeEntry.not_ongoing.visible(user).select(:id, :entity_type, :entity_id, :hours).arel
+    end
+
+    def entity_join
+      visible_time_entries_cte[:entity_type].eq("WorkPackage").and(
+        visible_time_entries_cte[:entity_id].eq(wp_descendants[:id])
+      )
     end
 
     def wp_table
