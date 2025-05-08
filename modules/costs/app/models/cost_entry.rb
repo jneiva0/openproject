@@ -61,6 +61,7 @@ class CostEntry < ApplicationRecord
   extend CostEntryScopes
   include Entry::Costs
   include Entry::SplashedDates
+  include Entry::DeprecatedAssociation
 
   def after_initialize
     return unless new_record?
@@ -96,37 +97,9 @@ class CostEntry < ApplicationRecord
     update_costs
   end
 
-  def work_package
-    OpenProject::Deprecation.replaced(:work_package, :entity, caller_locations)
-
-    if entity_type == "WorkPackage"
-      entity
-    end
-  end
-
-  def work_package_id
-    OpenProject::Deprecation.replaced(:work_package_id, :entity_id, caller_locations)
-
-    if entity_type == "WorkPackage"
-      entity_id
-    end
-  end
-
-  def work_package=(value)
-    OpenProject::Deprecation.replaced(:work_package=, :entity=, caller_locations)
-    self.entity = value
-  end
-
-  def work_package_id=(value)
-    OpenProject::Deprecation.replaced(:work_package_id=, :entity_id=, caller_locations)
-
-    self.entity_type = "WorkPackage"
-    self.entity_id = value
-  end
-
   def entity=(value)
     if value.is_a?(String) && value.starts_with?("gid://")
-      super(GlobalID::Locator.locate(value, only: ALLOWED_ENTITY_TYPES.map(&:constantize)))
+      super(GlobalID::Locator.locate(value, only: ALLOWED_ENTITY_TYPES.map(&:safe_constantize)))
     else
       super
     end

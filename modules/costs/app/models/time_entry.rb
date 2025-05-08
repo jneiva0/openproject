@@ -31,8 +31,6 @@
 class TimeEntry < ApplicationRecord
   ALLOWED_ENTITY_TYPES = %w[WorkPackage Meeting].freeze
 
-  self.ignored_columns += %w[work_package_id]
-
   # could have used polymorphic association
   # project association here allows easy loading of time entries at project level with one database trip
   belongs_to :project
@@ -89,6 +87,7 @@ class TimeEntry < ApplicationRecord
   include ::Scopes::Scoped
   include Entry::Costs
   include Entry::SplashedDates
+  include Entry::DeprecatedAssociation
 
   scopes :of_user_and_day,
          :ongoing
@@ -116,37 +115,9 @@ class TimeEntry < ApplicationRecord
     end
   end
 
-  def work_package
-    OpenProject::Deprecation.replaced(:work_package, :entity, caller_locations)
-
-    if entity_type == "WorkPackage"
-      entity
-    end
-  end
-
-  def work_package_id
-    OpenProject::Deprecation.replaced(:work_package_id, :entity_id, caller_locations)
-
-    if entity_type == "WorkPackage"
-      entity_id
-    end
-  end
-
-  def work_package=(value)
-    OpenProject::Deprecation.replaced(:work_package=, :entity=, caller_locations)
-    self.entity = value
-  end
-
-  def work_package_id=(value)
-    OpenProject::Deprecation.replaced(:work_package_id=, :entity_id=, caller_locations)
-
-    self.entity_type = "WorkPackage"
-    self.entity_id = value
-  end
-
   def entity=(value)
     if value.is_a?(String) && value.starts_with?("gid://")
-      super(GlobalID::Locator.locate(value, only: ALLOWED_ENTITY_TYPES.map(&:constantize)))
+      super(GlobalID::Locator.locate(value, only: ALLOWED_ENTITY_TYPES.map(&:safe_constantize)))
     else
       super
     end
