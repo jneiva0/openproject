@@ -42,7 +42,7 @@ module API
           def allowed_scope
             edit_scope = WorkPackage.where(project_id: Project.allowed_to(User.current, :edit_time_entries))
             edit_own_scope = WorkPackage.where(id: WorkPackage.allowed_to(User.current, :edit_own_time_entries))
-            ongoing_scope = WorkPackage.where(id: TimeEntry.visible_ongoing.select(:work_package_id))
+            ongoing_scope = WorkPackage.where(id: TimeEntry.where(entity_type: "WorkPackage").visible_ongoing.select(:entity_id))
 
             edit_scope
               .or(edit_own_scope)

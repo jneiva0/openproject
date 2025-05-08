@@ -28,8 +28,12 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-class Queries::TimeEntries::Filters::CreatedAtFilter < Queries::TimeEntries::Filters::TimeEntryFilter
+class Queries::TimeEntries::Filters::EntityIdFilter < Queries::TimeEntries::Filters::TimeEntryFilter
   def type
-    :datetime_past
+    :integer
+  end
+
+  def self.key
+    :entity_id
   end
 end

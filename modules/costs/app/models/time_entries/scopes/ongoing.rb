@@ -37,7 +37,12 @@ module TimeEntries::Scopes
 
       def visible_ongoing(user = User.current)
         TimeEntry
-          .where(work_package_id: visible_work_packages(user).select(:id), user:, ongoing: true)
+          .where(
+            entity_type: "WorkPackage",
+            entity_id: visible_work_packages(user).select(:id),
+            user:,
+            ongoing: true
+          )
       end
 
       def visible_work_packages(user)

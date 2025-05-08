@@ -29,7 +29,8 @@
 module Queries::TimeEntries
   ::Queries::Register.register(TimeEntryQuery) do
     filter Filters::UserFilter
-    filter Filters::WorkPackageFilter
+    filter Filters::EntityIdFilter
+    filter Filters::EntityTypeFilter
     filter Filters::ProjectFilter
     filter Filters::SpentOnFilter
     filter Filters::CreatedAtFilter

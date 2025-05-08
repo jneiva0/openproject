@@ -37,13 +37,13 @@ RSpec.describe Queries::TimeEntries::TimeEntryQuery, "integration" do
 
   context "when using ongoing filter" do
     let(:project) { create(:project, enabled_module_names: %w[costs]) }
-    let(:user) { create(:user, member_with_permissions: { project => %i[log_own_time] }) }
+    let(:user) { create(:user, member_with_permissions: { project => %i[log_own_time view_own_time_entries] }) }
     let(:work_package) { create(:work_package, project:) }
-    let(:other_user) { create(:user, member_with_permissions: { project => %i[log_own_time] }) }
+    let(:other_user) { create(:user, member_with_permissions: { project => %i[log_own_time view_own_time_entries] }) }
     let(:other_work_package) { create(:work_package, project:) }
 
-    let!(:user_timer) { create(:time_entry, user:, work_package:, ongoing: true) }
-    let!(:other_user_timer) { create(:time_entry, user: other_user, work_package: other_work_package, ongoing: true) }
+    let!(:user_timer) { create(:time_entry, user:, entity: work_package, ongoing: true) }
+    let!(:other_user_timer) { create(:time_entry, user: other_user, entity: other_work_package, ongoing: true) }
 
     describe "#results" do
       subject { instance.results }
@@ -56,8 +56,8 @@ RSpec.describe Queries::TimeEntries::TimeEntryQuery, "integration" do
         expect(subject).to contain_exactly(user_timer)
       end
 
-      context "when user has log_time permission" do
-        let(:user) { create(:user, member_with_permissions: { project => %i[log_time] }) }
+      context "when user has log_time and view_time_entries permission" do
+        let(:user) { create(:user, member_with_permissions: { project => %i[log_time view_time_entries] }) }
 
         it "still returns the users own time entries" do
           expect(subject).to contain_exactly(user_timer)
