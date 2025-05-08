@@ -32,8 +32,6 @@ require "spec_helper"
 require "services/base_services/behaves_like_update_service"
 
 RSpec.describe ProjectLifeCycleSteps::UpdateService, type: :model do
-  shared_let(:week_days) { week_with_saturday_and_sunday_as_weekend }
-
   before do
     allow(project).to receive(:touch_and_save_journals)
   end
@@ -94,6 +92,8 @@ RSpec.describe ProjectLifeCycleSteps::UpdateService, type: :model do
   end
 
   describe "#reschedule_following_phases" do
+    shared_let(:week_days) { week_with_saturday_and_sunday_as_weekend }
+
     let(:date) { Date.new(2025, 4, 9) }
     let(:user) { create(:user) }
     let(:service) { described_class.new(user:, model: phase) }
