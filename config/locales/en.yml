@@ -1370,6 +1370,7 @@ en:
               non_continuous_dates: "can't be earlier than the previous phase's end date."
             finish_date:
               must_be_after_start_date: "must be after the start date."
+          cannot_be_a_non_working_day: "can't be a non-working day."
         query:
           attributes:
             project:

@@ -31,6 +31,8 @@
 module ProjectLifeCycleSteps
   class UpdateContract < BaseContract
     validate :validate_start_after_preceeding_phases
+    validate :validate_start_date_is_a_working_day
+    validate :validate_finish_date_is_a_working_day
 
     delegate :project, to: :model
 
@@ -42,6 +44,18 @@ module ProjectLifeCycleSteps
       return if start_after_preceding_phases?
 
       model.errors.add(:start_date, :non_continuous_dates)
+    end
+
+    def validate_start_date_is_a_working_day
+      if model.start_date.present? && !model.start_date.in?(working_days)
+        model.errors.add(:start_date, :cannot_be_a_non_working_day)
+      end
+    end
+
+    def validate_finish_date_is_a_working_day
+      if model.finish_date.present? && !model.finish_date.in?(working_days)
+        model.errors.add(:finish_date, :cannot_be_a_non_working_day)
+      end
     end
 
     private
@@ -58,6 +72,17 @@ module ProjectLifeCycleSteps
 
     def preceding_phases
       project.available_phases.select { it.position < model.position }
+    end
+
+    def working_days
+      return @working_days if defined?(@working_days)
+
+      dates = [model.start_date, model.finish_date].compact
+      @working_days = if dates.any?
+                        Day.from_range(from: dates.min, to: dates.max).working.pluck("days.date")
+                      else
+                        []
+                      end
     end
   end
 end

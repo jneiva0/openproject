@@ -57,7 +57,7 @@ RSpec.describe ProjectLifeCycleSteps::UpdateContract do
         build_stubbed(:project_phase, start_date: date + 1, finish_date: date - 1)
       end
 
-      it_behaves_like "contract is invalid", date_range: :start_date_must_be_before_finish_date
+      it_behaves_like "contract is invalid", start_date: :must_be_before_finish_date
     end
 
     context "when trying to change extra attributes" do
@@ -98,7 +98,7 @@ RSpec.describe ProjectLifeCycleSteps::UpdateContract do
       context "with preceding phase overlapping with start" do
         let(:preceding_date_range) { date - 6..date - 1 }
 
-        it_behaves_like "contract is invalid", date_range: :non_continuous_dates
+        it_behaves_like "contract is invalid", start_date: :non_continuous_dates
 
         context "when inactive" do
           let(:active) { false }
@@ -110,7 +110,7 @@ RSpec.describe ProjectLifeCycleSteps::UpdateContract do
       context "with preceding phase following this" do
         let(:preceding_date_range) { date + 2..date + 4 }
 
-        it_behaves_like "contract is invalid", date_range: :non_continuous_dates
+        it_behaves_like "contract is invalid", start_date: :non_continuous_dates
 
         context "when inactive" do
           let(:active) { false }
@@ -135,6 +135,71 @@ RSpec.describe ProjectLifeCycleSteps::UpdateContract do
         let(:following_date_range) { date - 4..date - 2 }
 
         it_behaves_like "contract is valid"
+      end
+    end
+
+    describe "#validate_dates_must_be_on_working_days" do
+      let(:non_working_day) { Date.current }
+      let(:phase) do
+        build_stubbed(:project_phase, start_date:, finish_date:)
+      end
+
+      before do
+        set_non_working_days(non_working_day)
+      end
+
+      context "when the start date is a non working day" do
+        let(:start_date) { non_working_day }
+        let(:finish_date) { non_working_day + 1.day }
+
+        it_behaves_like "contract is invalid", start_date: :cannot_be_a_non_working_day
+
+        context "and the finish date is nil" do
+          let(:finish_date) { nil }
+
+          it_behaves_like "contract is invalid", start_date: :cannot_be_a_non_working_day
+        end
+      end
+
+      context "when the finish date is a non working day" do
+        let(:start_date) { non_working_day - 1.day }
+        let(:finish_date) { non_working_day }
+
+        it_behaves_like "contract is invalid", finish_date: :cannot_be_a_non_working_day
+
+        context "and the start date is nil" do
+          let(:start_date) { nil }
+
+          it_behaves_like "contract is invalid", finish_date: :cannot_be_a_non_working_day
+        end
+      end
+
+      context "when both dates are on non working day" do
+        let(:start_date) { non_working_day }
+        let(:finish_date) { non_working_day }
+
+        it_behaves_like "contract is invalid",
+                        start_date: :cannot_be_a_non_working_day,
+                        finish_date: :cannot_be_a_non_working_day
+      end
+
+      context "when both dates are on a working day" do
+        let(:start_date) { non_working_day - 1.day }
+        let(:finish_date) { non_working_day + 1 }
+
+        it_behaves_like "contract is valid"
+
+        context "and the start date is nil" do
+          let(:start_date) { nil }
+
+          it_behaves_like "contract is valid"
+        end
+
+        context "and the finish date is nil" do
+          let(:finish_date) { nil }
+
+          it_behaves_like "contract is valid"
+        end
       end
     end
   end

@@ -91,12 +91,11 @@ class Project::Phase < ApplicationRecord
 
   def validate_date_range
     if range_set? && (start_date > finish_date)
-      date_field, error_message = if finish_date_changed?
-                                    %i[finish_date must_be_after_start_date]
-                                  else
-                                    %i[start_date must_be_before_finish_date]
-                                  end
-      errors.add(date_field, error_message)
+      if finish_date_changed?
+        errors.add(:finish_date, :must_be_after_start_date)
+      else
+        errors.add(:start_date, :must_be_before_finish_date)
+      end
     end
   end
 
