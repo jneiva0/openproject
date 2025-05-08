@@ -41,9 +41,9 @@ RSpec.describe CostlogController do
   let (:controller) { build(:project_role, permissions: %i[log_costs edit_cost_entries]) }
   let (:cost_type) { build(:cost_type) }
   let (:cost_entry) do
-    build(:cost_entry, work_package:,
+    build(:cost_entry, entity: work_package,
                        project:,
-                       spent_on: Date.today,
+                       spent_on: Date.current,
                        overridden_costs: 400,
                        units: 100,
                        user:,
@@ -68,7 +68,7 @@ RSpec.describe CostlogController do
   shared_examples_for "assigns" do
     it do
       expect(assigns(:cost_entry).project).to eq(expected_project)
-      expect(assigns(:cost_entry).work_package).to eq(expected_work_package)
+      expect(assigns(:cost_entry).entity).to eq(expected_work_package)
       expect(assigns(:cost_entry).user).to eq(expected_user)
       expect(assigns(:cost_entry).spent_on).to eq(expected_spent_on)
       expect(assigns(:cost_entry).cost_type).to eq(expected_cost_type)
@@ -92,7 +92,7 @@ RSpec.describe CostlogController do
     let(:expected_project) { project }
     let(:expected_work_package) { work_package }
     let(:expected_user) { user }
-    let(:expected_spent_on) { Date.today }
+    let(:expected_spent_on) { Date.current }
     let(:expected_cost_type) { nil }
     let(:expected_overridden_costs) { nil }
     let(:expected_units) { nil }

@@ -120,11 +120,12 @@ class CostlogController < ApplicationController
               User.find_by(id: user_id)
             end
 
-    work_package_id = cost_entry_params.delete(:work_package_id)
-    @work_package = if @cost_entry.present? && @cost_entry.entity_type == "WorkPackage" && @cost_entry.enity_id == work_package_id
+    entity_id = cost_entry_params.delete(:entity_id)
+    entity_type = cost_entry_params.delete(:entity_type)
+    @work_package = if @cost_entry.present? && @cost_entry.entity_type == "WorkPackage" && @cost_entry.entity_id == entity_id
                       @cost_entry.entity
-                    else
-                      WorkPackage.find_by(id: work_package_id)
+                    elsif entity_type == "WorkPackage"
+                      WorkPackage.find_by(id: entity_id)
                     end
 
     cost_type_id = cost_entry_params.delete(:cost_type_id)
@@ -161,7 +162,14 @@ class CostlogController < ApplicationController
   end
 
   def cost_entry_params
-    params.require(:cost_entry).permit(:work_package_id, :spent_on, :user_id,
-                                       :cost_type_id, :units, :comments)
+    params
+      .require(:cost_entry)
+      .permit(:entity_id, :entity_type, :spent_on, :user_id,
+              :cost_type_id, :units, :comments).tap do |permitted_params|
+      if params[:cost_entry][:work_package_id]
+        permitted_params[:entity_id] = params[:cost_entry][:work_package_id]
+        permitted_params[:entity_type] = "WorkPackage"
+      end
+    end
   end
 end
