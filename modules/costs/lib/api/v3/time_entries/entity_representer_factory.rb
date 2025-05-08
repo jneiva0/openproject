@@ -92,15 +92,20 @@ module API
           }
         end
 
-        def create_setter_lambda(name, property_name: name, namespaces: %i(work_packages meetings))
+        def create_setter_lambda(name)
           ->(fragment:, **) {
-            ::API::Decorators::LinkObject
-              .new(represented,
-                   property_name:,
-                   namespace: namespaces,
-                   getter: :"#{name}_id",
-                   setter: :"#{name}_id=")
-              .from_hash(fragment)
+            result = ::API::Utilities::ResourceLinkParser.parse(fragment["href"])
+
+            case result[:namespace]
+            when "meetings"
+              represented.public_send("#{name}_id=", result[:id])
+              represented.public_send("#{name}_type=", "Meeting")
+            when "work_packages"
+              represented.public_send("#{name}_id=", result[:id])
+              represented.public_send("#{name}_type=", "WorkPackage")
+            else
+              # TODO: Handle error if unexpected object
+            end
           }
         end
       end

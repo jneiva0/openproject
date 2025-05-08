@@ -34,7 +34,7 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "parsing" do
   let(:time_entry) do
     build_stubbed(:time_entry,
                   comments: "blubs",
-                  spent_on: Date.today - 3.days,
+                  spent_on: Date.current - 3.days,
                   created_at: DateTime.now - 6.hours,
                   updated_at: DateTime.now - 3.hours,
                   activity:,
@@ -43,8 +43,9 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "parsing" do
   end
   let(:project) { build_stubbed(:project) }
   let(:project2) { build_stubbed(:project) }
-  let(:work_package) { time_entry.work_package }
-  let(:work_package2) { build_stubbed(:work_package) }
+  let(:work_package) { time_entry.entity }
+  let(:work_package2) { build_stubbed(:work_package, project: project2) }
+  let(:meeting) { build_stubbed(:meeting, project: project2) }
   let(:activity) { build_stubbed(:time_entry_activity) }
   let(:activity2) { build_stubbed(:time_entry_activity) }
   let(:user) { build_stubbed(:user) }
@@ -59,6 +60,10 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "parsing" do
     build_stubbed(:time_entry_custom_field)
   end
 
+  let(:entity_link) do
+    api_v3_paths.work_package(work_package2.id)
+  end
+
   let(:hash) do
     {
       "_links" => {
@@ -68,9 +73,8 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "parsing" do
         "activity" => {
           "href" => api_v3_paths.time_entries_activity(activity2.id)
         },
-        "workPackage" => {
-          "href" => api_v3_paths.work_package(work_package2.id)
-
+        "entity" => {
+          "href" => entity_link
         },
         user_custom_field.attribute_name(:camel_case) => {
           "href" => api_v3_paths.user(user2.id)
@@ -111,11 +115,11 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "parsing" do
       end
     end
 
-    context "workPackage" do
+    context "entity" do
       it "updates the work_package" do
         time_entry = representer.from_hash(hash)
-        expect(time_entry.work_package_id)
-          .to eql(work_package2.id)
+        expect(time_entry.entity_id).to eql(work_package2.id)
+        expect(time_entry.entity_type).to eql("WorkPackage")
       end
     end
 
@@ -125,6 +129,20 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "parsing" do
 
         expect(time_entry.custom_field_values.detect { |cv| cv.custom_field_id == user_custom_field.id }.value)
           .to eql(user2.id.to_s)
+      end
+    end
+
+    context "assigning a meeting as entity" do
+      let(:entity_link) do
+        api_v3_paths.meeting(meeting.id)
+      end
+
+      context "entity" do
+        it "updates the meeting" do
+          time_entry = representer.from_hash(hash)
+          expect(time_entry.entity_id).to eql(meeting.id)
+          expect(time_entry.entity_type).to eql("Meeting")
+        end
       end
     end
   end
