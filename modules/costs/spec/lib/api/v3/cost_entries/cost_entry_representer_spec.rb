@@ -64,8 +64,8 @@ RSpec.describe API::V3::CostEntries::CostEntryRepresenter do
   end
 
   it_behaves_like "has a titled link" do
-    let(:link) { "workPackage" }
-    let(:href) { api_v3_paths.work_package cost_entry.work_package.id }
+    let(:link) { "entity" }
+    let(:href) { api_v3_paths.work_package cost_entry.entity.id }
     let(:title) { cost_entry.work_package.subject }
   end
 

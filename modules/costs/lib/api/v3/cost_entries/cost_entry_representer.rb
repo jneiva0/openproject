@@ -43,6 +43,10 @@ module API
                             getter: ::API::V3::CostEntries::EntityRepresenterFactory.create_getter_lambda(:entity),
                             link: ::API::V3::CostEntries::EntityRepresenterFactory.create_link_lambda(:entity)
 
+        # TODO: DEPRECATED!
+        associated_resource :work_package,
+                            skip_render: ->(*) { represented.entity_type != "WorkPackage" }
+
         property :id, render_nil: true
         property :units, as: :spentUnits
 

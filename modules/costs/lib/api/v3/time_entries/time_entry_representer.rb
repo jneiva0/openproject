@@ -97,6 +97,10 @@ module API
                             getter: ::API::V3::TimeEntries::EntityRepresenterFactory.create_getter_lambda(:entity),
                             link: ::API::V3::TimeEntries::EntityRepresenterFactory.create_link_lambda(:entity)
 
+        # TODO: DEPRECATED!
+        associated_resource :work_package,
+                            skip_render: ->(*) { represented.entity_type != "WorkPackage" }
+
         associated_resource :user
 
         date_time_property :start_time,

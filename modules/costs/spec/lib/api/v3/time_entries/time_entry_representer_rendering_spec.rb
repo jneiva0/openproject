@@ -40,11 +40,12 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "rendering" do
                   hours:,
                   activity:,
                   project:,
-                  work_package:,
+                  entity: work_package,
                   user:)
   end
   let(:project) { build_stubbed(:project) }
   let(:work_package) { build_stubbed(:work_package, project:) }
+  let(:meeting) { build_stubbed(:meeting, project:) }
   let(:activity) { build_stubbed(:time_entry_activity) }
   let(:user) { build_stubbed(:user) }
   let(:current_user) { user }
@@ -82,10 +83,34 @@ RSpec.describe API::V3::TimeEntries::TimeEntryRepresenter, "rendering" do
       let(:title) { project.name }
     end
 
-    it_behaves_like "has a titled link" do
-      let(:link) { "workPackage" }
-      let(:href) { api_v3_paths.work_package work_package.id }
-      let(:title) { work_package.subject }
+    context "with a time entry logged on a work package" do
+      it_behaves_like "has a titled link" do
+        let(:link) { "entity" }
+        let(:href) { api_v3_paths.work_package work_package.id }
+        let(:title) { work_package.subject }
+      end
+
+      it_behaves_like "has a titled link" do
+        let(:link) { "workPackage" }
+        let(:href) { api_v3_paths.work_package work_package.id }
+        let(:title) { work_package.subject }
+      end
+    end
+
+    context "with a time entry logged on a meeting" do
+      before do
+        time_entry.entity = meeting
+      end
+
+      it_behaves_like "has a titled link" do
+        let(:link) { "entity" }
+        let(:href) { api_v3_paths.meeting meeting.id }
+        let(:title) { meeting.title }
+      end
+
+      it_behaves_like "has no link" do
+        let(:link) { "workPackage" }
+      end
     end
 
     it_behaves_like "has a titled link" do
