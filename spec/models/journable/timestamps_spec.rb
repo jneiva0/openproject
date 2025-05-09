@@ -274,10 +274,16 @@ RSpec.describe Journable::Timestamps do
           subject { relation.at_timestamp(friday) }
 
           it "joins the journable table rather than the journal-data table" do
-            expect(subject.to_sql).not_to include \
-              "INNER JOIN \"time_entries\" ON \"time_entries\".\"work_package_id\" = \"work_package_journals\".\"id\""
-            expect(subject.to_sql).to include \
-              "INNER JOIN \"time_entries\" ON \"time_entries\".\"work_package_id\" = \"journals\".\"journable_id\""
+            expect(subject.to_sql).not_to include <<~SQL.squish
+              INNER JOIN "time_entries"
+              ON "time_entries"."entity_type" = 'WorkPackage'
+              AND "time_entries"."entity_id" = "work_package_journals"."id"
+            SQL
+            expect(subject.to_sql).to include <<~SQL.squish
+              INNER JOIN "time_entries"
+                ON "time_entries"."entity_type" = 'WorkPackage'
+                AND "time_entries"."entity_id" = "journals"."journable_id"
+            SQL
           end
 
           it "returns the matching records in their historic states" do
@@ -502,8 +508,8 @@ RSpec.describe Journable::Timestamps do
 
         describe "when plucking the id as sub query (workaround)" do
           subject do
-            sub_query_ids = WorkPackage.at_timestamp(monday) \
-                .where(description: "The work package as it has been on Monday") \
+            sub_query_ids = WorkPackage.at_timestamp(monday)
+                .where(description: "The work package as it has been on Monday")
                 .pluck(:id)
             WorkPackage.where(id: sub_query_ids)
           end

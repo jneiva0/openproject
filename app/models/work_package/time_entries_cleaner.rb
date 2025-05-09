@@ -56,7 +56,7 @@ module WorkPackage::TimeEntriesCleaner
     end
 
     def update_time_entries(work_packages, action)
-      TimeEntry.where(["work_package_id IN (?)", work_packages.map(&:id)]).update_all(action)
+      TimeEntry.where(["entity_type = ? AND entity_id IN (?)", "WorkPackage", work_packages.map(&:id)]).update_all(action)
     end
 
     def reassign_time_entries_before_destruction_of(work_packages, user, ids)
@@ -73,7 +73,7 @@ module WorkPackage::TimeEntriesCleaner
 
         false
       else
-        condition = "work_package_id = #{reassign_to.id}, project_id = #{reassign_to.project_id}"
+        condition = "entity_type = 'WorkPackage', entity_id = #{reassign_to.id}, project_id = #{reassign_to.project_id}"
         WorkPackage.update_time_entries(work_packages, condition)
       end
     end

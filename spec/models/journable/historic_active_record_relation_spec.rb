@@ -560,8 +560,11 @@ RSpec.describe Journable::HistoricActiveRecordRelation do
       before { work_package.time_entries << create(:time_entry) }
 
       it "transforms the table name" do
-        expect(subject.to_sql).to include \
-          "JOIN \"time_entries\" ON \"time_entries\".\"work_package_id\" = \"journals\".\"journable_id\""
+        expect(subject.to_sql).to include <<~SQL.squish
+          INNER JOIN "time_entries"
+            ON "time_entries"."entity_type" = 'WorkPackage'
+            AND "time_entries"."entity_id" = "journals"."journable_id"
+        SQL
       end
 
       it "returns the requested work package" do
@@ -572,7 +575,7 @@ RSpec.describe Journable::HistoricActiveRecordRelation do
     describe "using a manual sql expression" do
       # This is used in the manual-sorting feature.
       let(:relation) do
-        WorkPackage \
+        WorkPackage
           .joins("LEFT OUTER JOIN ordered_work_packages ON ordered_work_packages.work_package_id = work_packages.id")
       end
 

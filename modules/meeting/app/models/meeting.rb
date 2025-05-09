@@ -41,6 +41,8 @@ class Meeting < ApplicationRecord
   belongs_to :recurring_meeting, optional: true
   has_one :scheduled_meeting, inverse_of: :meeting
 
+  has_many :time_entries, dependent: :delete_all, inverse_of: :entity, as: :entity
+
   # Legacy association to minutes, agendas, contents
   # to be removed in 17.0
   has_one :agenda, dependent: :destroy, class_name: "MeetingAgenda"

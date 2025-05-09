@@ -352,12 +352,7 @@ class Journable::HistoricActiveRecordRelation < ActiveRecord::Relation
           gsub_table_names_in_sql_string!(node.left)
         elsif node.kind_of?(Arel::Nodes::Join) and node.right.kind_of?(Arel::Nodes::On)
           [node.right.expr.left, node.right.expr.right].each do |attribute|
-            if attribute.respond_to? :relation and
-                (attribute.relation == journal_class.arel_table) and
-                (attribute.name == "id")
-              attribute.relation = Journal.arel_table
-              attribute.name = "journable_id"
-            end
+            modify_conditions(attribute)
           end
         end
       end
@@ -439,6 +434,13 @@ class Journable::HistoricActiveRecordRelation < ActiveRecord::Relation
       # expr, which is a NodeExpression itself
       [node.expr.left, node.expr.right].each { |child| modify_conditions(child) }
     elsif node.kind_of?(Arel::Attributes::Attribute)
+      # With the replacement of the table ivar we might already have switched the base relation ... so if the ID is used
+      # in a join, we should also replace it with the journable
+      if node.relation == model.journal_class.arel_table && node.name == "id"
+        node.relation = Journal.arel_table
+        node.name = "journable_id"
+      end
+
       # We find an attribute, figure out if it is the model's table
       if node.relation == model.arel_table
         if node.name == "id"
