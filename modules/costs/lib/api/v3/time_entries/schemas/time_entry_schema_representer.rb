@@ -80,7 +80,7 @@ module API
           # TODO: also factory needed here?
           schema_with_allowed_link :entity,
                                    has_default: false,
-                                   required: false,
+                                   required: true,
                                    href_callback: ->(*) {
                                      allowed_work_package_href
                                    }

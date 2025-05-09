@@ -41,7 +41,7 @@ RSpec.describe API::V3::TimeEntries::Schemas::TimeEntrySchemaRepresenter do
   let(:assigned_project) { nil }
   let(:activity) { build_stubbed(:time_entry_activity) }
   let(:time_entry) { build_stubbed(:time_entry) }
-  let(:writable_attributes) { %w(spent_on hours project work_package activity comment user) }
+  let(:writable_attributes) { %w(spent_on hours project entity activity comment user) }
 
   let(:contract) do
     contract = instance_double(new_record ? TimeEntries::CreateContract : TimeEntries::UpdateContract,
@@ -211,13 +211,13 @@ RSpec.describe API::V3::TimeEntries::Schemas::TimeEntrySchemaRepresenter do
       end
     end
 
-    describe "work_package" do
-      let(:path) { "workPackage" }
+    describe "entity" do
+      let(:path) { "entity" }
 
       it_behaves_like "has basic schema properties" do
-        let(:type) { "WorkPackage" }
-        let(:name) { TimeEntry.human_attribute_name("work_package") }
-        let(:required) { false }
+        let(:type) { "Entity" }
+        let(:name) { TimeEntry.human_attribute_name("entity") }
+        let(:required) { true }
         let(:writable) { true }
         let(:location) { "_links" }
       end
