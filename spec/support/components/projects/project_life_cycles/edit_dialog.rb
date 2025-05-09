@@ -51,9 +51,10 @@ module Components
           close if close_after_yield
         end
 
-        def clear_date
-          find("input[id^='project_phase_date_range']").set ""
-          find_by_id("edit-project-life-cycles-dialog-title").click
+        def clear_dates
+          click_button("start_date_clear_button") if has_button?("start_date_clear_button")
+          click_button("finish_date_clear_button") if has_button?("finish_date_clear_button")
+          sleep 1 # Wait for the debounce from previewForm to complete
         end
 
         def set_date_for(values:)
@@ -61,12 +62,9 @@ module Components
 
           datepicker = Components::RangeDatepicker.new(dialog_selector)
 
-          datepicker.open(
-            "input[id^='project_phase_date_range']"
-          )
-
           values.each do |date|
             datepicker.set_date(date.strftime("%Y-%m-%d"))
+            sleep 1 # Wait for the debounce from previewForm to complete
           end
         end
 
@@ -78,13 +76,13 @@ module Components
         alias_method :close_via_icon, :close
 
         def close_via_button
-          within(dialog_css_selector) do
+          within_dialog do
             click_link_or_button "Cancel"
           end
         end
 
         def submit
-          within(dialog_css_selector) do
+          within_dialog do
             page.find("[data-test-selector='save-project-life-cycles-button']").click
           end
         end
@@ -101,29 +99,27 @@ module Components
           expect(page).to have_css(async_content_container_css_selector)
         end
 
-        def expect_input(label, value:)
-          within_async_content do
-            expect(page).to have_field(
-              label,
-              with: value,
-              name: "project_phase[date_range]"
-            )
+        def expect_title(text)
+          within_dialog do
+            expect(page).to have_css("h1", text:)
           end
         end
 
-        def expect_input_for(step)
-          value = "#{step.start_date.strftime('%Y-%m-%d')} - #{step.finish_date.strftime('%Y-%m-%d')}"
-
-          expect_input(step.name, value:)
-        end
-
-        def expect_caption(text: nil, present: true)
-          selector = 'span[id^="caption"]'
-          expect_selector_for(selector:, text:, present:)
-        end
-
-        def expect_no_caption
-          expect_caption(present: false)
+        def expect_input(label, value:, disabled: false)
+          within_async_content do
+            expect(page).to have_field(label, with: value, disabled:)
+            # Note: This capybara matcher has a bug and it raises an error, if the
+            # label, name and disabled flags are passed at once.
+            #
+            # TypeError: no implicit conversion of XPath::Expression into Integer (TypeError)
+            #   expression_filter(:disabled) { |xpath, val| val ? xpath : xpath[~XPath.attr(:disabled)] }
+            # from ~/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/gems/capybara-3.40.0/lib/capybara/selector.rb:448:in 'String#[]'
+            expect(page).to have_field(
+              with: value,
+              name: "project_phase[#{label.parameterize.underscore}]",
+              disabled:
+            )
+          end
         end
 
         def expect_validation_message(text: nil, present: true)

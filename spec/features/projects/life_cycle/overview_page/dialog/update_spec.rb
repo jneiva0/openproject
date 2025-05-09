@@ -57,13 +57,17 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
   describe "with the dialog open" do
     context "when all LifeCycleSteps are blank" do
       before do
-        Project::Phase.update_all(start_date: nil, finish_date: nil)
+        Project::Phase.update_all(start_date: nil, finish_date: nil, duration: nil)
+        project_life_cycles.each(&:reload)
       end
 
       it "shows all the Project::Phases without a value" do
         project_life_cycles.each do |life_cycle|
           dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle)
-          dialog.expect_input(life_cycle.name, value: "")
+          dialog.expect_title(life_cycle.name)
+          dialog.expect_input("Start date", value: "")
+          dialog.expect_input("Finish date", value: "")
+          dialog.expect_input("Duration", value: "", disabled: true)
 
           dialog.submit # Saving the dialog is successful
           dialog.expect_closed
@@ -87,7 +91,11 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
         # Set a value for life_cycle_initiating
         dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_initiating, wait_angular: true)
 
-        dialog.expect_input_for(life_cycle_initiating)
+        life_cycle_initiating.tap do |step|
+          dialog.expect_input("Start date", value: step.start_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Finish date", value: step.finish_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Duration", value: step.duration, disabled: true)
+        end
 
         retry_block do
           # Retrying due to a race condition between filling the input vs submitting the form preview.
@@ -95,11 +103,12 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
           dialog.set_date_for(values: original_dates)
 
           page.driver.clear_network_traffic
+
           dialog.set_date_for(values: [start_date - 1.week, start_date])
 
-          dialog.expect_caption(text: "Duration: 8 working days")
-          # Ensure that only 1 ajax request is triggered after setting the date range.
-          expect(page.driver.browser.network.traffic.size).to eq(1)
+          dialog.expect_input("Duration", value: 8, disabled: true)
+          # Ensure that 2 ajax request are triggered after setting the date range.
+          expect(page.driver.browser.network.traffic.size).to eq(2)
         end
 
         # Saving the dialog is successful
@@ -118,8 +127,13 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
         # Clear the value of life_cycle_planning
         dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_planning, wait_angular: true)
 
-        dialog.expect_input_for(life_cycle_planning)
-        dialog.clear_date
+        life_cycle_planning.tap do |step|
+          dialog.expect_input("Start date", value: step.start_date.strftime("%Y-%m-%d"), disabled: true)
+          dialog.expect_input("Finish date", value: step.finish_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Duration", value: step.duration, disabled: true)
+        end
+
+        dialog.clear_dates
 
         # Saving the dialog is successful
         dialog.submit
@@ -145,8 +159,16 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
                                         "#{I18n.l life_cycle_initiating.start_date} - " \
                                         "#{I18n.l life_cycle_initiating.finish_date}")
 
-          activity_page.expect_activity("Planning date deleted " \
+          activity_page.expect_activity("Planning changed from " \
                                         "#{I18n.l life_cycle_planning_was.start_date} - " \
+                                        "#{I18n.l life_cycle_planning_was.finish_date} to " \
+                                        "#{I18n.l life_cycle_planning.start_date} - ")
+
+          activity_page.expect_activity("Planning Start Gate changed from " \
+                                        "#{I18n.l life_cycle_planning_was.start_date} to " \
+                                        "#{I18n.l life_cycle_planning.start_date}")
+
+          activity_page.expect_activity("Planning Finish Gate date deleted " \
                                         "#{I18n.l life_cycle_planning_was.finish_date}")
 
           activity_page.expect_activity("Executing changed from " \
