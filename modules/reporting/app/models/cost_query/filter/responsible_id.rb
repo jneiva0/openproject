@@ -28,7 +28,7 @@
 
 class CostQuery::Filter::ResponsibleId < CostQuery::Filter::UserId
   use :null_operators
-  join_table WorkPackage
+  join_table WorkPackage => [Entry, :entity]
   applies_for :label_work_package_attributes
 
   def self.label

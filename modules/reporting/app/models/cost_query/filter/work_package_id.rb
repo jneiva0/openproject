@@ -29,6 +29,8 @@
 #++
 
 class CostQuery::Filter::WorkPackageId < Report::Filter::Base
+  db_field "entries.entity_id"
+
   def self.label
     WorkPackage.model_name.human
   end
@@ -68,5 +70,11 @@ class CostQuery::Filter::WorkPackageId < Report::Filter::Base
          end
 
     text_for_tuple(wp.id, wp.subject)
+  end
+
+  def sql_statement
+    super.tap do |query|
+      query.where << "entries.entity_type = 'WorkPackage'"
+    end
   end
 end

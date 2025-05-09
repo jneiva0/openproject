@@ -28,7 +28,7 @@
 
 class CostQuery::Filter::Subject < Report::Filter::Base
   use :string_operators
-  join_table WorkPackage
+  join_table WorkPackage => [Entry, :entity]
   applies_for :label_work_package_attributes
 
   def self.label

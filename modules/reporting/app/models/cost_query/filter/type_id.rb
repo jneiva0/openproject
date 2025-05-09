@@ -27,7 +27,7 @@
 #++
 
 class CostQuery::Filter::TypeId < Report::Filter::Base
-  join_table WorkPackage
+  join_table WorkPackage => [Entry, :entity]
   applies_for :label_work_package_attributes
 
   def self.label

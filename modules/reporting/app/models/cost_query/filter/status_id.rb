@@ -28,7 +28,7 @@
 
 class CostQuery::Filter::StatusId < Report::Filter::Base
   available_operators "c", "o"
-  join_table WorkPackage, Status => [WorkPackage, :status]
+  join_table WorkPackage => [Entry, :entity], Status => [WorkPackage, :status]
   applies_for :label_work_package_attributes
 
   def self.label
