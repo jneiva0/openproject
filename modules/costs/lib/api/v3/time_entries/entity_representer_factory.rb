@@ -42,6 +42,8 @@ module API
         end
 
         def representer_class(model)
+          return if model.nil?
+
           case model
           when WorkPackage then ::API::V3::WorkPackages::WorkPackageRepresenter
           when Meeting then ::API::V3::Meetings::MeetingRepresenter
@@ -51,6 +53,8 @@ module API
         end
 
         def representer_type(model)
+          return if model.nil?
+
           case model
           when WorkPackage then :work_package
           when Meeting then :meeting
@@ -60,6 +64,8 @@ module API
         end
 
         def title_attribute(model)
+          return if model.nil?
+
           case model
           when WorkPackage then :subject
           when Meeting then :title

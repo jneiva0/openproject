@@ -54,7 +54,8 @@ class CostEntry < ApplicationRecord
   validate :validate
 
   validates :entity_type,
-            inclusion: { in: ALLOWED_ENTITY_TYPES }
+            inclusion: { in: ALLOWED_ENTITY_TYPES },
+            allow_blank: true
 
   scope :on_work_packages, ->(work_packages) { where(entity: work_packages) }
 

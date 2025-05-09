@@ -79,7 +79,7 @@ RSpec.describe API::V3::TimeEntries::CreateFormAPI, content_type: :json do
 
     context "with empty parameters" do
       it "has 4 validation errors" do
-        expect(subject.body).to have_json_size(3).at_path("_embedded/validationErrors")
+        expect(subject.body).to have_json_size(4).at_path("_embedded/validationErrors")
       end
 
       it "has a validation error on project" do
@@ -104,7 +104,7 @@ RSpec.describe API::V3::TimeEntries::CreateFormAPI, content_type: :json do
       let(:parameters) do
         {
           _links: {
-            workPackage: {
+            entity: {
               href: api_v3_paths.work_package(work_package.id)
             },
             project: {
@@ -114,7 +114,7 @@ RSpec.describe API::V3::TimeEntries::CreateFormAPI, content_type: :json do
               href: api_v3_paths.time_entries_activity(active_activity.id)
             }
           },
-          spentOn: Date.today.to_s,
+          spentOn: Date.current.iso8601,
           hours: "PT5H",
           comment: {
             raw: "some comment"
@@ -138,7 +138,7 @@ RSpec.describe API::V3::TimeEntries::CreateFormAPI, content_type: :json do
 
         expect(body)
           .to be_json_eql(api_v3_paths.work_package(work_package.id).to_json)
-          .at_path("_embedded/payload/_links/workPackage/href")
+          .at_path("_embedded/payload/_links/entity/href")
 
         expect(body)
           .to be_json_eql(api_v3_paths.time_entries_activity(active_activity.id).to_json)
@@ -153,7 +153,7 @@ RSpec.describe API::V3::TimeEntries::CreateFormAPI, content_type: :json do
           .at_path("_embedded/payload/comment/raw")
 
         expect(body)
-          .to be_json_eql(Date.today.to_s.to_json)
+          .to be_json_eql(Date.current.to_json)
           .at_path("_embedded/payload/spentOn")
 
         expect(body)
@@ -172,7 +172,7 @@ RSpec.describe API::V3::TimeEntries::CreateFormAPI, content_type: :json do
 
         expect(body)
           .to be_json_eql(wp_path.to_json)
-          .at_path("_embedded/schema/workPackage/_links/allowedValues/href")
+          .at_path("_embedded/schema/entity/_links/allowedValues/href")
 
         expect(body)
           .to be_json_eql(api_v3_paths.time_entries_available_projects.to_json)
