@@ -27,7 +27,7 @@
 #++
 
 class CostQuery::GroupBy::AuthorId < Report::GroupBy::Base
-  join_table WorkPackage
+  join_table WorkPackage => [Entry, :entity]
 
   def self.label
     WorkPackage.human_attribute_name(:author)

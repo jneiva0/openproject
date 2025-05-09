@@ -27,6 +27,13 @@
 #++
 
 class CostQuery::GroupBy::WorkPackageId < Report::GroupBy::Base
+  db_field :entity_id
+
+  def initialize(child = nil, options = {})
+    super
+    group_fields :entity_type, :entity_id
+  end
+
   def self.label
     WorkPackage.model_name.human
   end
