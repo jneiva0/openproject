@@ -51,7 +51,7 @@ module Storages
     store_attribute :provider_fields, :storage_audience, :string
 
     def oauth_configuration
-      Peripherals::OAuthConfigurations::NextcloudConfiguration.new(self)
+      Adapters::Providers::Nextcloud::OAuthConfiguration.new(self)
     end
 
     def automatic_management_new_record?

@@ -79,7 +79,7 @@ module Storages
     end
 
     def oauth_configuration
-      Peripherals::OAuthConfigurations::OneDriveConfiguration.new(self)
+      Adapters::Providers::OneDrive::OAuthConfiguration.new(self)
     end
 
     def uri

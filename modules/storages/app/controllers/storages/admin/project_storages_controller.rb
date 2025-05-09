@@ -149,10 +149,7 @@ class Storages::Admin::ProjectStoragesController < Projects::SettingsController
   end
 
   def available_storages
-    Storages::Storage
-      .visible
-      .not_enabled_for_project(@project)
-      .select(&:configured?)
+    Storages::Storage.visible.not_enabled_for_project(@project).select(&:configured?)
   end
 
   def redirect_to_project_storages_path_with_oauth_access_grant_confirmation(storage)

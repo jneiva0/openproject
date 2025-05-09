@@ -87,19 +87,19 @@ RSpec.describe Storages::Admin::Health::HealthReportComponent, type: :component 
   private
 
   def generate_test_group(group_key, checks)
-    group = Storages::Peripherals::ConnectionValidators::ValidationGroupResult.new(group_key)
+    group = Storages::Adapters::ConnectionValidators::ValidationGroupResult.new(group_key)
 
     checks.each_with_index do |check, idx|
       key = :"check_#{idx + 1}"
       result = case check
                when :success
-                 Storages::Peripherals::ConnectionValidators::CheckResult.success(key)
+                 Storages::Adapters::ConnectionValidators::CheckResult.success(key)
                when :warning
-                 Storages::Peripherals::ConnectionValidators::CheckResult.warning(key, :"#{key}_warning", nil)
+                 Storages::Adapters::ConnectionValidators::CheckResult.warning(key, :"#{key}_warning", nil)
                when :failure
-                 Storages::Peripherals::ConnectionValidators::CheckResult.failure(key, :"#{key}_failure", nil)
+                 Storages::Adapters::ConnectionValidators::CheckResult.failure(key, :"#{key}_failure", nil)
                else
-                 Storages::Peripherals::ConnectionValidators::CheckResult.skipped(key)
+                 Storages::Adapters::ConnectionValidators::CheckResult.skipped(key)
                end
 
       group.register_check(key)
@@ -116,7 +116,7 @@ RSpec.describe Storages::Admin::Health::HealthReportComponent, type: :component 
 
   def generate_test_report(map)
     allow(I18n).to receive(:t).and_call_original
-    report = Storages::Peripherals::ConnectionValidators::ValidatorResult.new
+    report = Storages::Adapters::ConnectionValidators::ValidatorResult.new
 
     map.each_pair do |key, values|
       result = generate_test_group(key, values)

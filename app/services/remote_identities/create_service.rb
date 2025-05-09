@@ -49,7 +49,7 @@ module RemoteIdentities
       if @model.new_record? || @force_update
         origin_result = @integration.extract_origin_user_id(@token)
 
-        user_id = origin_result.value_or { return ServiceResult.failure(errors: user_id) }
+        user_id = origin_result.value_or { return ServiceResult.failure(errors: it) }
 
         @model.origin_user_id = user_id
         return success unless @model.changed?

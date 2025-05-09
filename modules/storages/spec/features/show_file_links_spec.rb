@@ -45,18 +45,15 @@ RSpec.describe "Showing of file links in work package", :js do
   let(:wp_page) { Pages::FullWorkPackage.new(work_package, project) }
 
   let(:sync_service) { instance_double(Storages::FileLinkSyncService) }
-  let(:authorization_state) { ServiceResult.success }
+  let(:authorization_state) { Success() }
   let(:remote_identity) { create(:remote_identity, user: current_user, integration: storage) }
 
   before do
-    Storages::Peripherals::Registry.stub(
-      "#{storage}.queries.user",
-      ->(_) { authorization_state }
-    )
+    Storages::Adapters::Registry.stub("#{storage}.queries.user", ->(_) { authorization_state })
 
     # Mock FileLinkSyncService as if Nextcloud would respond with origin_status=nil
-    allow(Storages::FileLinkSyncService)
-      .to receive(:new).and_return(sync_service)
+    allow(Storages::FileLinkSyncService).to receive(:new).and_return(sync_service)
+
     allow(sync_service).to receive(:call) do |file_links|
       ServiceResult.success(result: file_links.each { |file_link| file_link.origin_status = :view_allowed })
     end
@@ -96,7 +93,7 @@ RSpec.describe "Showing of file links in work package", :js do
   end
 
   context "if user is not connected to Nextcloud" do
-    let(:remote_identity) { nil }
+    let(:authorization_state) { Failure(Storages::Adapters::Results::Error.new(code: :missing_token, source: self)) }
 
     it "must show storage information box with login button" do
       within_test_selector("op-tab-content--tab-section", text: "MY STORAGE", wait: 25) do
@@ -108,7 +105,7 @@ RSpec.describe "Showing of file links in work package", :js do
   end
 
   context "if user is not authorized in Nextcloud" do
-    let(:authorization_state) { ServiceResult.failure(errors: Storages::StorageError.new(code: :unauthorized)) }
+    let(:authorization_state) { Failure(Storages::Adapters::Results::Error.new(code: :unauthorized, source: self)) }
 
     it "must show storage information box with login button" do
       within_test_selector("op-tab-content--tab-section", text: "MY STORAGE", wait: 25) do
@@ -120,7 +117,7 @@ RSpec.describe "Showing of file links in work package", :js do
   end
 
   context "if an error occurred while authorizing to Nextcloud" do
-    let(:authorization_state) { ServiceResult.failure(errors: Storages::StorageError.new(code: :error)) }
+    let(:authorization_state) { Failure(Storages::Adapters::Results::Error.new(code: :error, source: self)) }
 
     it "must show storage information box" do
       within_test_selector("op-tab-content--tab-section", text: "MY STORAGE", wait: 25) do

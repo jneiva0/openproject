@@ -65,11 +65,9 @@ RSpec.configure do |config|
   config.include Dry::Monads[:result]
 
   config.prepend_before do
-    Storages::Peripherals::Registry.enable_stubs!
     Storages::Adapters::Registry.enable_stubs!
   end
   config.append_after do
-    Storages::Peripherals::Registry.unstub
     Storages::Adapters::Registry.unstub
   end
 

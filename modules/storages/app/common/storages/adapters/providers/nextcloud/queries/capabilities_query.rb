@@ -39,7 +39,7 @@ module Storages
             end
 
             def call(auth_strategy:)
-              http_options = { headers: { accepts: "application/json" } }.deep_merge(ocs_api_request_headers)
+              http_options = { headers: { Accept: "application/json" } }.deep_merge(ocs_api_request_headers)
               Authentication[auth_strategy].call(storage: @storage, http_options:) do |http|
                 handle_response(http.get(url))
               end

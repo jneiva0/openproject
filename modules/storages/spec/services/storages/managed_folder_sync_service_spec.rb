@@ -39,18 +39,20 @@ RSpec.describe Storages::ManagedFolderSyncService do
     class_double(Storages::NextcloudManagedFolderPermissionsService, call: ServiceResult.success)
   end
 
+  # TODO: This masks missing keys.
+  #   We may need to figure out a better way to write this these tests - 2025-05-08 @mereghost
   before do
-    allow(Storages::Peripherals::Registry).to receive(:resolve)
-      .with("nextcloud.services.folder_create")
+    allow(Storages::Adapters::Registry).to receive(:resolve)
+      .with("nextcloud.services.upkeep_managed_folders")
       .and_return(folder_create_service)
-    allow(Storages::Peripherals::Registry).to receive(:resolve)
-      .with("one_drive.services.folder_create")
+    allow(Storages::Adapters::Registry).to receive(:resolve)
+      .with("one_drive.services.upkeep_managed_folders")
       .and_return(folder_create_service)
-    allow(Storages::Peripherals::Registry).to receive(:resolve)
-      .with("nextcloud.services.folder_permissions")
+    allow(Storages::Adapters::Registry).to receive(:resolve)
+      .with("nextcloud.services.upkeep_managed_folder_permissions")
       .and_return(folder_permissions_service)
-    allow(Storages::Peripherals::Registry).to receive(:resolve)
-      .with("one_drive.services.folder_permissions")
+    allow(Storages::Adapters::Registry).to receive(:resolve)
+      .with("one_drive.services.upkeep_managed_folder_permissions")
       .and_return(folder_permissions_service)
   end
 
@@ -69,12 +71,13 @@ RSpec.describe Storages::ManagedFolderSyncService do
   context "when the storage is a Nextcloud storage" do
     it "uses the Nextcloud folder create service" do
       call
-      expect(Storages::Peripherals::Registry).to have_received(:resolve).with("nextcloud.services.folder_create")
+      expect(Storages::Adapters::Registry).to have_received(:resolve).with("nextcloud.services.upkeep_managed_folders")
     end
 
     it "calls the Nextcloud folder permissions service" do
       call
-      expect(Storages::Peripherals::Registry).to have_received(:resolve).with("nextcloud.services.folder_permissions")
+      expect(Storages::Adapters::Registry)
+        .to have_received(:resolve).with("nextcloud.services.upkeep_managed_folder_permissions")
     end
   end
 
@@ -83,12 +86,13 @@ RSpec.describe Storages::ManagedFolderSyncService do
 
     it "calls the OneDrive folder create service" do
       call
-      expect(Storages::Peripherals::Registry).to have_received(:resolve).with("one_drive.services.folder_create")
+      expect(Storages::Adapters::Registry).to have_received(:resolve).with("one_drive.services.upkeep_managed_folders")
     end
 
     it "calls the OneDrive folder permissions service" do
       call
-      expect(Storages::Peripherals::Registry).to have_received(:resolve).with("one_drive.services.folder_permissions")
+      expect(Storages::Adapters::Registry)
+        .to have_received(:resolve).with("one_drive.services.upkeep_managed_folder_permissions")
     end
   end
 

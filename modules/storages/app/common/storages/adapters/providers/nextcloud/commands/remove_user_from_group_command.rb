@@ -53,7 +53,7 @@ module Storages
 
               case response
               in { status: 200..299 }
-                handle_success_response(response, error)
+                handle_success_response(response.xml, error)
               in { status: 405 }
                 Failure(error.with(code: :not_allowed))
               in { status: 401 }
@@ -69,7 +69,7 @@ module Storages
 
             # rubocop:disable Metrics/AbcSize
             def handle_success_response(response, error)
-              status_code = Nokogiri::XML(response.body.to_s).xpath("/ocs/meta/statuscode").text
+              status_code = response.xpath("/ocs/meta/statuscode").text
               case status_code
               when "100"
                 info "User has been removed from group"

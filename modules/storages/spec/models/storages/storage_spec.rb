@@ -36,16 +36,8 @@ RSpec.describe Storages::Storage do
     let(:storage) { build(:storage, oauth_client:) }
     let(:oauth_client) { create(:oauth_client) }
     let(:user) { create(:user) }
-    let(:selector_class) { Storages::Peripherals::StorageInteraction::AuthenticationMethodSelector }
-    let(:mocked_instance) { instance_double(selector_class, authentication_method:) }
-
-    before do
-      allow(selector_class).to receive(:new).and_return(mocked_instance)
-    end
 
     context "when user is authenticated through storage oauth" do
-      let(:authentication_method) { :storage_oauth }
-
       it "responds with true if oauth_client_token exists" do
         create(:oauth_client_token, user: user, oauth_client:)
         expect(storage.oauth_access_granted?(user)).to be true
@@ -57,7 +49,9 @@ RSpec.describe Storages::Storage do
     end
 
     context "when user is authenticated through sso" do
-      let(:authentication_method) { :sso }
+      let(:provider) { create(:oidc_provider) }
+      let(:user) { create(:user, authentication_provider: provider) }
+      let(:storage) { build(:nextcloud_storage, :oidc_sso_enabled) }
 
       it "responds with true" do
         expect(storage.oauth_access_granted?(user)).to be true

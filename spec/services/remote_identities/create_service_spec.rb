@@ -19,7 +19,7 @@ RSpec.describe RemoteIdentities::CreateService, :storage_server_helpers, type: :
 
   before do
     allow(OpenProject::Notifications).to receive(:send)
-    allow(integration).to receive(:extract_origin_user_id).and_return(ServiceResult.success(result: "the-extracted-user-id"))
+    allow(integration).to receive(:extract_origin_user_id).and_return(Success("the-extracted-user-id"))
   end
 
   describe ".call" do

@@ -29,54 +29,27 @@
 #++
 
 module Storages
-  class ManagedFolderSyncService < BaseService
-    using Peripherals::ServiceResultRefinements
+  module Adapters
+    module AuthenticationStrategies
+      class OAuthConfiguration
+        include ActiveModel::Validations
 
-    class << self
-      def call(storage)
-        new(storage).call
+        attr_reader :scope, :issuer, :client_secret, :client_id
+
+        validates_presence_of :client_id, :client_secret, :issuer
+
+        # FIXME: Move to Data and a Validator
+        def initialize(client_id: nil, client_secret: nil, issuer: nil, scope: nil)
+          @client_id = client_id
+          @client_secret = client_secret
+          @issuer = issuer
+          @scope = scope
+        end
+
+        def to_h
+          { issuer:, client_id:, client_secret:, scope: }
+        end
       end
-    end
-
-    def initialize(storage)
-      super()
-      @storage = storage
-    end
-
-    def call
-      with_tagged_logger([self.class.name, "storage-#{@storage.id}"]) do
-        info "Starting AMPF Sync for Storage #{@storage.id}"
-        prepare_remote_folders.on_failure { return epilogue }
-        apply_permissions_to_folders
-        epilogue
-      end
-    end
-
-    private
-
-    def epilogue
-      info "Synchronization process for Storage #{@storage.id} has ended. #{@result.errors.count} errors found."
-      @result
-    end
-
-    def prepare_remote_folders
-      folder_create_service.call(storage: @storage).tap do |subresult|
-        @result.merge!(subresult)
-      end
-    end
-
-    def apply_permissions_to_folders
-      folder_permissions_service.call(storage: @storage).tap do |subresult|
-        @result.merge!(subresult)
-      end
-    end
-
-    def folder_create_service
-      Adapters::Registry.resolve("#{@storage}.services.upkeep_managed_folders")
-    end
-
-    def folder_permissions_service
-      Adapters::Registry.resolve("#{@storage}.services.upkeep_managed_folder_permissions")
     end
   end
 end

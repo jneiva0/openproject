@@ -82,7 +82,7 @@ module Storages
           in { warning: 1.. }
             I18n.t("storages.health.checks.warnings", count: tally[:warning])
           else
-            I18n.t("storages.health.checks.failures", count: 0)
+            I18n.t("storages.health.checks.success")
           end
         end
 

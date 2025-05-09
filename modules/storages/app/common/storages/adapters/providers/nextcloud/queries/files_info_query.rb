@@ -42,7 +42,7 @@ module Storages
               with_tagged_logger do
                 info "Retrieving file information for #{input_data.file_ids.join(', ')}"
 
-                http_options = ocs_api_request_headers.deep_merge(headers: { "Accepts" => "application/json" })
+                http_options = ocs_api_request_headers.deep_merge(headers: { "Accept" => "application/json" })
                 Authentication[auth_strategy].call(storage: @storage, http_options:) do |http|
                   files_info(http, input_data.file_ids).fmap { create_storage_file_infos(it) }
                 end

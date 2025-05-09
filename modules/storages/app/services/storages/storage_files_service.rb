@@ -40,14 +40,11 @@ module Storages
       info "Requesting all the files under folder #{folder} for #{storage.name}"
 
       input_data = Adapters::Input::Files.build(folder:).value_or do
-        add_validation_error(it)
-        return @result
+        return add_validation_error(it)
       end
 
       files = Adapters::Registry.resolve("#{storage}.queries.files").call(storage:, auth_strategy:, input_data:).value_or do
-        add_error(:base, it, options: { storage_name: storage.name, folder: })
-
-        return @result
+        return add_error(:base, it, options: { storage_name: storage.name, folder: })
       end
 
       @result.result = files

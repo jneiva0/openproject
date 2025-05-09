@@ -99,7 +99,7 @@ class Storages::Admin::AutomaticallyManagedProjectFoldersController < Applicatio
     if service_result.success?
       redirect_to edit_admin_settings_storage_path(@storage)
     else
-      @wizard = ::Storages::Peripherals::Registry.resolve("#{@storage}.components.setup_wizard")
+      @wizard = ::Storages::Adapters::Registry.resolve("#{@storage}.components.setup_wizard")
                                                  .new(model: @storage, user: current_user)
       render :edit
     end
@@ -112,7 +112,7 @@ class Storages::Admin::AutomaticallyManagedProjectFoldersController < Applicatio
       component: Storages::Admin::Forms::AutomaticallyManagedProjectFoldersFormComponent.new(@storage)
     )
 
-    @wizard = ::Storages::Peripherals::Registry.resolve("#{@storage}.components.setup_wizard")
+    @wizard = ::Storages::Adapters::Registry.resolve("#{@storage}.components.setup_wizard")
                                                .new(model: @storage, user: current_user)
     respond_with_turbo_streams do |format|
       format.html { render :edit }

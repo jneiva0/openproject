@@ -75,7 +75,8 @@ module Storages
               let(:storage) { create(:nextcloud_storage_configured, :oidc_sso_enabled) }
 
               let(:user) { create(:user, authentication_provider: oidc_provider) }
-              let!(:oidc_provider) { create(:oidc_provider) }
+              let!(:oidc_provider) { create(:oidc_provider, scope:) }
+              let(:scope) { "openid email profile offline_access" }
 
               before do
                 User.current = user
@@ -99,7 +100,7 @@ module Storages
                   expect(result[:non_provisioned_user].code).to eq(:oidc_non_provisioned_user)
 
                   state_count = result.tally
-                  expect(state_count).to eq({ skipped: 3, warning: 1 })
+                  expect(state_count).to eq({ skipped: 4, warning: 1 })
                 end
 
                 it "returns a warning if the user is not provisioned by an oidc provider" do
@@ -110,7 +111,22 @@ module Storages
                   expect(result[:provisioned_user_provider].code).to eq(:oidc_non_oidc_user)
 
                   state_count = result.tally
-                  expect(state_count).to eq({ success: 1, skipped: 2, warning: 1 })
+                  expect(state_count).to eq({ success: 1, skipped: 3, warning: 1 })
+                end
+
+                context "when the offline_access scope is not configured" do
+                  let(:scope) { "openid email profile" }
+
+                  it "returns a warning", :aggregate_failures do
+                    create(:oidc_user_token, user:, extra_audiences: storage.audience)
+                    result = validator.call
+
+                    expect(result[:offline_access]).to be_warning
+                    expect(result[:offline_access].code).to eq(:offline_access_scope_missing)
+
+                    state_count = result.tally
+                    expect(state_count).to eq({ success: 4, warning: 1 })
+                  end
                 end
               end
 
@@ -163,7 +179,7 @@ module Storages
                   end
 
                   context "when the server supports token exchange" do
-                    let(:oidc_provider) { create(:oidc_provider, :token_exchange_capable) }
+                    let(:oidc_provider) { create(:oidc_provider, :token_exchange_capable, scope: "offline_access") }
                     let(:exchangeable_token) { create(:oidc_user_token, user:, refresh_token: nil) }
 
                     it "favors token exchange when refreshing" do

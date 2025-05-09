@@ -147,7 +147,7 @@ class Storages::Admin::StoragesController < ApplicationController
     else
       origin_component = params[:origin_component].presence || "general_information"
       update_via_turbo_stream(
-        component: ::Storages::Peripherals::Registry.resolve("#{@storage}.components.forms.#{origin_component}").new(
+        component: ::Storages::Adapters::Registry.resolve("#{@storage}.components.forms.#{origin_component}").new(
           @storage,
           in_wizard: params[:continue_wizard].present?
         )
@@ -274,7 +274,7 @@ class Storages::Admin::StoragesController < ApplicationController
   end
 
   def storage_wizard(storage)
-    ::Storages::Peripherals::Registry.resolve("#{storage}.components.setup_wizard")
+    ::Storages::Adapters::Registry.resolve("#{storage}.components.setup_wizard")
                                      .new(model: storage, user: current_user)
   end
 
@@ -286,6 +286,6 @@ class Storages::Admin::StoragesController < ApplicationController
     storage_name = storage.is_a?(String) ? ::Storages::Storage.shorten_provider_type(storage) : storage.to_s
     origin_component = params[:origin_component].presence || "general_information"
 
-    ::Storages::Peripherals::Registry.resolve("#{storage_name}.contracts.#{origin_component}")
+    ::Storages::Adapters::Registry.resolve("#{storage_name}.contracts.#{origin_component}")
   end
 end

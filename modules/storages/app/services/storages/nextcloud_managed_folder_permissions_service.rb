@@ -101,7 +101,7 @@ module Storages
         end
 
         @commands[:remove_user_from_group].call(auth_strategy:, input_data:).or do |error|
-          add_error(:remove_user_from_group, error, options: { user:, group:, reason: error.log_message })
+          add_error(:remove_user_from_group, error, options: { user:, group:, reason: error.code })
         end
       end
     end

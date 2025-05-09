@@ -17,9 +17,9 @@
 
       component.with_row(scheme: :default) do
         if wizard_step == step_name
-          render(Storages::Peripherals::Registry.resolve("#{storage}.components.forms.#{step_name}").new(storage, in_wizard: true))
+          render(Storages::Adapters::Registry.resolve("#{storage}.components.forms.#{step_name}").new(storage, in_wizard: true))
         else
-          render(Storages::Peripherals::Registry.resolve("#{storage}.components.#{step_name}").new(storage))
+          render(Storages::Adapters::Registry.resolve("#{storage}.components.#{step_name}").new(storage))
         end
       end
     end

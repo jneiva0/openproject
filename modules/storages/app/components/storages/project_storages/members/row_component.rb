@@ -90,13 +90,11 @@ module Storages::ProjectStorages::Members
     def storage_connection_status
       if storage_connected?
         return :connected if can_read_files?
-
         return :connected_no_permissions
       end
 
-      selector = Storages::Peripherals::StorageInteraction::AuthenticationMethodSelector.new(user: member.principal, storage:)
-      return :not_connected_sso if selector.sso?
-      return :not_connected_oauth2 if selector.storage_oauth?
+      return :not_connected_sso if storage.authenticate_via_idp? && member.principal.provided_by_oidc?
+      return :not_connected_oauth2 if storage.authenticate_via_storage?
 
       :not_connectable
     end

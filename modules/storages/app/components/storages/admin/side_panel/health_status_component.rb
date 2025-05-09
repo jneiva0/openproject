@@ -39,7 +39,7 @@ module Storages
         private
 
         def report
-          validator = Peripherals::Registry.resolve("#{model}.validators.connection").new(model)
+          validator = Adapters::Registry.resolve("#{model}.validators.connection").new(model)
           Rails.cache.read(validator.report_cache_key)
         end
       end

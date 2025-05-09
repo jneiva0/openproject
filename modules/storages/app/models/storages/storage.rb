@@ -120,16 +120,8 @@ module Storages
     end
 
     def oauth_access_granted?(user)
-      selector = Peripherals::StorageInteraction::AuthenticationMethodSelector.new(
-        storage: self,
-        user:
-      )
-      case selector.authentication_method
-      when :sso
-        true
-      when :storage_oauth
+      (user.authentication_provider.is_a?(OpenIDConnect::Provider) && authenticate_via_idp?) ||
         OAuthClientToken.exists?(user:, oauth_client:)
-      end
     end
 
     def health_notifications_should_be_sent?

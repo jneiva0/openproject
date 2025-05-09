@@ -37,10 +37,7 @@ RSpec.describe "/oauth_clients/:oauth_client_id/ensure_connection endpoint", :we
   shared_let(:oauth_client) { storage.oauth_client }
 
   before do
-    Storages::Peripherals::Registry.stub(
-      "#{storage}.queries.user",
-      ->(_) { ServiceResult.success }
-    )
+    Storages::Adapters::Registry.stub("#{storage}.queries.user", ->(_) { Success() })
   end
 
   describe "#ensure_connection" do
@@ -65,9 +62,9 @@ RSpec.describe "/oauth_clients/:oauth_client_id/ensure_connection endpoint", :we
           let(:nonce) { "57a17c3f-b2ed-446e-9dd8-651ba3aec37d" }
 
           before do
-            Storages::Peripherals::Registry.stub(
+            Storages::Adapters::Registry.stub(
               "#{storage}.queries.user",
-              ->(_) { ServiceResult.failure(errors: Storages::StorageError.new(code: :unauthorized)) }
+              ->(_) { Failure(Storages::Adapters::Results::Error.new(code: :missing_token, source: self)) }
             )
 
             allow(SecureRandom).to receive(:uuid).and_call_original.ordered

@@ -34,9 +34,6 @@ module Storages
       module OneDrive
         module Queries
           class FilePathToIdMapQuery < Base
-            # FIXME: Find a way to remove this
-            Util = Peripherals::StorageInteraction::OneDrive::Util
-
             CHILDREN_FIELDS = %w[id name file folder parentReference].freeze
             FOLDER_FIELDS = %w[id name parentReference].freeze
 
@@ -87,12 +84,19 @@ module Storages
 
             def parse_drive_item_info(json)
               drive_item_id = json[:id]
-              location = Util.extract_location(json[:parentReference], json[:name])
+              location = extract_location(json[:parentReference], json[:name])
 
               entry = { location => StorageFileId.new(id: drive_item_id) }
               folder = json[:folder].present? ? Peripherals::ParentFolder.new(drive_item_id) : nil
 
               { entry:, folder: }
+            end
+
+            def extract_location(parent_reference, file_name = "")
+              location = parent_reference[:path].gsub(/.*root:/, "")
+
+              appendix = file_name.blank? ? "" : "/#{file_name}"
+              location.empty? ? "/#{file_name}" : "#{location}#{appendix}"
             end
 
             def fetch_folder(http, folder)
