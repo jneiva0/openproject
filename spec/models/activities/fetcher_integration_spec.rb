@@ -56,7 +56,7 @@ RSpec.describe Activities::Fetcher, "integration" do
     let(:forum) { create(:forum, project:) }
     let(:message) { create(:message, forum:, author: event_user) }
     let(:news) { create(:news, project:, author: event_user) }
-    let(:time_entry) { create(:time_entry, project:, work_package:, user: event_user) }
+    let(:time_entry) { create(:time_entry, project:, entity: work_package, user: event_user) }
     let(:repository) { create(:repository_subversion, project:) }
     let(:changeset) { create(:changeset, committer: event_user.login, repository:) }
     let(:wiki) { create(:wiki, project:) }

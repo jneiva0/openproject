@@ -31,7 +31,7 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
                         permission: :view_time_entries
 
   def extend_event_query(query)
-    query.join(work_packages_table).on(activity_journals_table[:work_package_id].eq(work_packages_table[:id]))
+    query.join(work_packages_table).on(work_package_join_condition)
     query.join(types_table).on(work_packages_table[:type_id].eq(types_table[:id]))
   end
 
@@ -40,7 +40,8 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
       activity_journal_projection_statement(:hours, "time_entry_hours"),
       activity_journal_projection_statement(:comments, "time_entry_comments"),
       activity_journal_projection_statement(:project_id, "project_id"),
-      activity_journal_projection_statement(:work_package_id, "work_package_id"),
+      activity_journal_projection_statement(:entity_type, "entity_type"),
+      activity_journal_projection_statement(:entity_id, "entity_id"),
       projection_statement(projects_table, :name, "project_name"),
       projection_statement(work_packages_table, :subject, "work_package_subject"),
       projection_statement(types_table, :name, "type_name")
@@ -49,8 +50,14 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
 
   protected
 
+  def work_package_join_condition
+    activity_journals_table[:entity_type].eq("WorkPackage").and(
+      activity_journals_table[:entity_id].eq(work_packages_table[:id])
+    )
+  end
+
   def event_title(event)
-    time_entry_object_name = event["work_package_id"].blank? ? event["project_name"] : work_package_title(event)
+    event["entity_id"].blank? ? event["project_name"] : work_package_title(event)
   end
 
   def event_type(_event)
@@ -58,7 +65,7 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
   end
 
   def work_package_title(event)
-    Activities::WorkPackageActivityProvider.work_package_title(event["work_package_id"],
+    Activities::WorkPackageActivityProvider.work_package_title(event["entity_id"],
                                                                event["work_package_subject"],
                                                                event["type_name"])
   end
@@ -68,7 +75,10 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
   end
 
   def event_path(event)
-    "/work_packages/#{event['work_package_id']}"
+    case event["entity_type"]
+    when "WorkPackage" then "/work_packages/#{event['entity_id']}"
+    when "Meeting" then "/meetings/#{event['entity_id']}"
+    end
   end
 
   def event_url(event)
@@ -84,8 +94,9 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
   end
 
   def event_location(event, only_path: true)
-    filter_params = if event["work_package_id"].present?
-                      work_package_id_filter(event["work_package_id"])
+    filter_params = if event["entity_type"] == "WorkPackage"
+                      work_package_id_filter(event["entity_id"])
+                      # TODO: Add meeeing here?
                     else
                       project_id_filter(event["project_id"])
                     end
