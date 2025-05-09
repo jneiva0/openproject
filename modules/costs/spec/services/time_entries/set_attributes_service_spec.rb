@@ -104,7 +104,7 @@ RSpec.describe TimeEntries::SetAttributesService, type: :model do
   context "with params" do
     let(:params) do
       {
-        work_package:,
+        entity: work_package,
         project:,
         activity:,
         spent_on:,
@@ -116,7 +116,8 @@ RSpec.describe TimeEntries::SetAttributesService, type: :model do
     let(:expected) do
       {
         user_id: user.id,
-        work_package_id: work_package.id,
+        entity_type: "WorkPackage",
+        entity_id: work_package.id,
         project_id: project.id,
         activity_id: activity.id,
         spent_on: Date.parse(spent_on),
@@ -172,7 +173,8 @@ RSpec.describe TimeEntries::SetAttributesService, type: :model do
         spent_on: Time.zone.today,
         ongoing: true,
         user_id: user.id,
-        work_package_id: work_package.id,
+        entity_type: "WorkPackage",
+        entity_id: work_package.id,
         activity_id: activity.id
       }
     end
@@ -227,11 +229,11 @@ RSpec.describe TimeEntries::SetAttributesService, type: :model do
   context "with project not specified" do
     let(:params) do
       {
-        work_package:
+        entity: work_package
       }
     end
 
-    it "sets the project to the work_package's project" do
+    it "sets the project to the entities project" do
       subject
 
       expect(time_entry_instance.project)
