@@ -56,7 +56,7 @@ module Projects::LifeCycles
 
     def start_date_input(form)
       data = datepicker_attributes[:data]
-      value = model.start_date || model.default_start_date || model.start_date_before_type_cast
+      value = model.default_start_date || model.start_date_before_type_cast
       disabled = model.default_start_date.present?
       caption = disabled ? I18n.t("activerecord.attributes.project/phase.start_date_caption") : nil
       input_attributes = {
@@ -75,7 +75,7 @@ module Projects::LifeCycles
 
     def finish_date_input(form)
       data = datepicker_attributes[:data]
-      value = model.finish_date || model.finish_date_before_type_cast
+      value = model.finish_date_before_type_cast
       input_attributes = {
         name: :finish_date,
         label: attribute_name(:finish_date),
