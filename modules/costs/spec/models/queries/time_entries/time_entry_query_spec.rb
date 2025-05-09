@@ -133,19 +133,22 @@ RSpec.describe Queries::TimeEntries::TimeEntryQuery do
     end
   end
 
-  context "with a work_package filter" do
+  context "with an entity filter" do
     before do
       allow(WorkPackage)
         .to receive_message_chain(:visible, :pluck)
         .with(:id)
         .and_return([1])
-      instance.where("work_package_id", "=", ["1"])
+      instance.where("entity_type", "=", "WorkPackage")
+      instance.where("entity_id", "=", ["1"])
     end
 
     describe "#results" do
       it "is the same as handwriting the query" do
+        # we need to build the exact same query as the filter, so we cannot optimize for the cop
         expected = base_scope
-                   .where(["time_entries.work_package_id IN (?)", ["1"]])
+         .where("time_entries.entity_type IN (?)", "WorkPackage") # rubocop:disable Rails/WhereEquals
+          .where("time_entries.entity_id IN (?)", ["1"]) # rubocop:disable Rails/WhereEquals
 
         expect(instance.results.to_sql).to eql expected.to_sql
       end
@@ -157,8 +160,8 @@ RSpec.describe Queries::TimeEntries::TimeEntryQuery do
       end
 
       it "is invalid if the filter is invalid" do
-        instance.where("work_package_id", "=", [""])
-        expect(instance).to be_invalid
+        instance.where("entity_id", "=", [""])
+        expect(instance).not_to be_valid
       end
     end
   end
