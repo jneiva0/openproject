@@ -39,7 +39,7 @@ module FullCalendar
           starts_at: time_entry.start_timestamp || time_entry.spent_on,
           ends_at: time_entry.end_timestamp || time_entry.spent_on,
           all_day: time_entry.start_time.blank?,
-          title: "#{time_entry.project.name}: ##{time_entry.work_package.id} #{time_entry.work_package.subject}"
+          title: "#{time_entry.project.name}: ##{time_entry.entity.id} #{time_entry.entity.subject}"
         )
         event.time_entry = time_entry
 
@@ -50,9 +50,9 @@ module FullCalendar
     def additional_attributes
       {
         hours: time_entry.hours,
-        typeId: time_entry.work_package.type_id,
-        workPackageId: time_entry.work_package.id,
-        workPackageSubject: time_entry.work_package.subject,
+        typeId: time_entry.entity.type_id,
+        workPackageId: time_entry.entity.id,
+        workPackageSubject: time_entry.entity.subject,
         projectId: time_entry.project.id,
         projectName: time_entry.project.name
       }

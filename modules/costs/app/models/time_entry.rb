@@ -144,7 +144,7 @@ class TimeEntry < ApplicationRecord
 
   # Returns true if the time entry can be edited by usr, otherwise false
   def editable_by?(usr)
-    (usr == user && usr.allowed_in_work_package?(:edit_own_time_entries, work_package)) ||
+    (usr == user && entity.is_a?(WorkPackage) && usr.allowed_in_work_package?(:edit_own_time_entries, entity)) ||
       usr.allowed_in_project?(:edit_time_entries, project)
   end
 
@@ -154,7 +154,7 @@ class TimeEntry < ApplicationRecord
 
   def visible_by?(usr)
     usr.allowed_in_project?(:view_time_entries, project) ||
-      (user_id == usr.id && usr.allowed_in_work_package?(:view_own_time_entries, work_package))
+      (user_id == usr.id && entity.is_a?(WorkPackage) && usr.allowed_in_work_package?(:view_own_time_entries, entity))
   end
 
   def costs_visible_by?(usr)

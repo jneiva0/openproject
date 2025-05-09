@@ -38,7 +38,7 @@ RSpec.describe "Time entries widget on dashboard", :js, :with_cuprite do
   let!(:other_work_package) { create(:work_package, project: other_project, type:, author: user) }
   let!(:visible_time_entry) do
     create(:time_entry,
-           work_package:,
+           entity: work_package,
            project:,
            user:,
            spent_on: Time.zone.today,
@@ -47,7 +47,7 @@ RSpec.describe "Time entries widget on dashboard", :js, :with_cuprite do
   end
   let!(:other_visible_time_entry) do
     create(:time_entry,
-           work_package:,
+           entity: work_package,
            project:,
            user: other_user,
            spent_on: 1.day.ago.to_date,
@@ -56,7 +56,7 @@ RSpec.describe "Time entries widget on dashboard", :js, :with_cuprite do
   end
   let!(:invisible_time_entry) do
     create(:time_entry,
-           work_package: other_work_package,
+           entity: other_work_package,
            project: other_project,
            user:,
            hours: 4)

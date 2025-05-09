@@ -52,7 +52,7 @@ RSpec.describe "TimeEntry activity",
   let!(:time_entry) do
     create(:time_entry,
            project:,
-           work_package:,
+           entity: work_package,
            spent_on: Time.zone.today,
            hours: 5,
            user:,
@@ -86,7 +86,7 @@ RSpec.describe "TimeEntry activity",
     old_spent_on = time_entry.spent_on
 
     new_attributes = {
-      work_package: work_package2,
+      entity: work_package2,
       spent_on: Time.zone.yesterday,
       hours: 1.0,
       user: user2,

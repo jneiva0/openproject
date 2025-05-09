@@ -41,7 +41,7 @@ module TimeEntries
           focusDirectly: false,
           multiple: false,
           decorated: true,
-          disabled: !project_or_work_package_selected?,
+          disabled: project_or_entity_selected?,
           append_to: "#time-entry-dialog"
         }
       ) do |select|

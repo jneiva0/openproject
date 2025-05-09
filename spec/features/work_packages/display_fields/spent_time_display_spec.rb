@@ -49,7 +49,7 @@ RSpec.describe "Logging time within the work package view", :js, :with_cuprite d
 
     # the fields are visible
     time_logging_modal.has_field_with_value "spent_on", Time.zone.today.strftime("%Y-%m-%d")
-    time_logging_modal.shows_field "work_package_id", false
+    time_logging_modal.shows_field "entity_id", false
     time_logging_modal.shows_field "user_id", user_field_visible
 
     # Update the fields
@@ -88,7 +88,7 @@ RSpec.describe "Logging time within the work package view", :js, :with_cuprite d
       spent_time_field.expect_display_value "1h"
 
       TimeEntry.last.tap do |te|
-        expect(te.work_package).to eq(work_package)
+        expect(te.entity).to eq(work_package)
         expect(te.project).to eq(project)
         expect(te.activity).to eq(activity)
         expect(te.user).to eq(user)

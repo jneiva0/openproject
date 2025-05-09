@@ -96,7 +96,7 @@ class Activities::TimeEntryActivityProvider < Activities::BaseActivityProvider
   def event_location(event, only_path: true)
     filter_params = if event["entity_type"] == "WorkPackage"
                       work_package_id_filter(event["entity_id"])
-                      # TODO: Add meeeing here?
+                      # TODO: Add meeting here?
                     else
                       project_id_filter(event["project_id"])
                     end
