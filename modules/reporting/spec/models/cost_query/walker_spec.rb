@@ -35,7 +35,7 @@ RSpec.describe CostQuery, :reporting_query_helper do
     create(:admin)
     project = create(:project_with_types)
     work_package = create(:work_package, project:)
-    create(:time_entry, work_package:, project:)
+    create(:time_entry, entity: work_package, project:)
   end
 
   describe Report::Transformer do
@@ -59,7 +59,7 @@ RSpec.describe CostQuery, :reporting_query_helper do
       query.row :user_id
 
       result = query.transformer.column_first.values.first
-      %i[tweek work_package_id].each do |field|
+      %i[tweek entity_type entity_id].each do |field|
         expect(result.fields).to include(field)
         result = result.values.first
       end
