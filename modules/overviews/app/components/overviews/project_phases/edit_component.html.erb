@@ -16,7 +16,7 @@
       html: { autocomplete: "off" }
     ) do |f|
       flex_layout do |flex|
-        flex.with_row do
+        flex.with_row(mb: 1) do
           render(Projects::LifeCycles::Form.new(f))
         end
         flex.with_row do
