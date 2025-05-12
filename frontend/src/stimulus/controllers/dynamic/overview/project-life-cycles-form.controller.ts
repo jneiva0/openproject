@@ -39,6 +39,7 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
   private timezoneService:TimezoneService;
   private handleFlatpickrDatesChangedBound = this.handleFlatpickrDatesChanged.bind(this);
   private updateFlatpickrCalendarBound = this.updateFlatpickrCalendar.bind(this);
+  private preventValueMorphingActiveElementBound = this.preventValueMorphingActiveElement.bind(this);
   private previewForm:DebouncedFunc<() => void>;
 
   static targets = ['startDate', 'finishDate', 'duration'];
@@ -59,6 +60,7 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
 
     document.addEventListener('date-picker:flatpickr-dates-changed', this.handleFlatpickrDatesChangedBound);
     document.addEventListener('turbo:before-stream-render', this.updateFlatpickrCalendarBound);
+    document.addEventListener('turbo:before-morph-attribute', this.preventValueMorphingActiveElementBound);
 
     const activeElement = document.activeElement as HTMLInputElement;
     if (activeElement && this.enabledDateInputFields.includes(activeElement)) {
@@ -69,6 +71,8 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
   disconnect() {
     document.removeEventListener('date-picker:flatpickr-dates-changed', this.handleFlatpickrDatesChangedBound);
     document.removeEventListener('turbo:before-stream-render', this.updateFlatpickrCalendarBound);
+    document.removeEventListener('turbo:before-morph-attribute', this.preventValueMorphingActiveElementBound);
+    this.previewForm.cancel();
   }
 
   onHighlightField(e:Event) {
@@ -120,6 +124,13 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
 
     this.updateFlatpickrCalendar();
     this.previewForm();
+  }
+
+  preventValueMorphingActiveElement(event:CustomEvent<{ attributeName:string }>) {
+    const target = event.target as HTMLInputElement;
+    if (target?.id === document.activeElement?.id && event.detail.attributeName === 'value') {
+      event.preventDefault();
+    }
   }
 
   private get dateInputFieldsToUpdate():HTMLInputElement[] {
