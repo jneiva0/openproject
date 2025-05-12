@@ -43,11 +43,22 @@ module Projects::LifeCycles
       "life-cycle-step-#{model.id}"
     end
 
-    def datepicker_attributes
+    def datepicker_attributes(field_name)
       {
+        name: field_name,
+        label: attribute_name(field_name),
+        type: field_type,
+        value: value(field_name),
+        autofocus: autofocus?(field_name),
+        placeholder:,
+        show_clear_button: show_clear_button?(field_name),
+        clear_button_id: "#{field_name}_clear_button",
         inset: true,
-        data: { action: "overview--project-life-cycles-form#previewForm " \
-                        "focusin->overview--project-life-cycles-form#onHighlightField" },
+        data: {
+          action: "focusin->overview--project-life-cycles-form#onHighlightField " \
+                  "overview--project-life-cycles-form#previewForm ",
+          "overview--project-life-cycles-form-target": field_name.to_s.camelize(:lower)
+        },
         wrapper_data_attributes: {
           "qa-field-name": qa_field_name
         }
@@ -56,30 +67,14 @@ module Projects::LifeCycles
 
     def start_date_input(form)
       input_attributes = {
-        name: :start_date,
-        label: attribute_name(:start_date),
-        autofocus: autofocus?(:start_date),
         disabled: start_date_disabled?,
         caption: start_date_caption,
-        value: start_date_value,
-        data: start_date_data,
-        show_clear_button: show_start_date_clear_button?,
-        clear_button_id: "start_date_clear_button"
       }
-      form.text_field **datepicker_attributes, **input_attributes
+      form.text_field **datepicker_attributes(:start_date), **input_attributes
     end
 
     def finish_date_input(form)
-      input_attributes = {
-        name: :finish_date,
-        label: attribute_name(:finish_date),
-        autofocus: autofocus?(:finish_date),
-        value: finish_date_value,
-        data: finish_date_data,
-        show_clear_button: show_finish_date_clear_button?,
-        clear_button_id: "finish_date_clear_button"
-      }
-      form.text_field **datepicker_attributes, **input_attributes
+      form.text_field **datepicker_attributes(:finish_date)
     end
 
     def duration_input(form)
@@ -106,8 +101,23 @@ module Projects::LifeCycles
       end
     end
 
-    def start_date_value
-      model.default_start_date || model.start_date_before_type_cast
+    def show_clear_button?(field_name)
+      value_is_present = value(field_name).present?
+      case field_name
+      when :start_date
+        value_is_present && !start_date_disabled?
+      when :finish_date
+        value_is_present
+      end
+    end
+
+    def value(field_name)
+      case field_name
+      when :start_date
+        model.default_start_date || model.start_date_before_type_cast
+      when :finish_date
+        model.finish_date_before_type_cast
+      end
     end
 
     def start_date_disabled?
@@ -118,28 +128,25 @@ module Projects::LifeCycles
       start_date_disabled? ? I18n.t("activerecord.attributes.project/phase.start_date_caption") : nil
     end
 
-    def show_start_date_clear_button?
-      start_date_value.present? && !start_date_disabled?
+    def field_type
+      # Do not show the native datepicker on iOS safari because it
+      # behaves totally different than all other browsers and destroys the behavior of the datepicker
+      # Given a date field with no value: When Safari opens its native datepicker, the first thing it does is to
+      # set the date to Today. And not only in the datepicker but directly in the field.
+      # This behaviour has however consequences:
+      # * The "reset" button in the datepicker does not clear the input (as the other browsers do it) but it resets
+      #   it to the original value it had when you opened it. So if the value was empty, it sets it back to empty.
+      #   If the value was set before, you cannot clear it, but only set it back to that value.
+      # * Since the input changes, the whole datepicker updates without the user even knowing about it,
+      #   since the form is hidden behind the datepicker. That leads to this:
+      #     when you enter a start date after today, and then open the datepicker for finish date,
+      #     it will reset the start date because the finish date is set automatically to today,
+      #     but the finish date can't be before the start date.
+      helpers.browser.device.mobile? && !helpers.browser.safari? ? :date : :text
     end
 
-    def start_date_data
-      datepicker_attributes[:data].merge(
-        "overview--project-life-cycles-form-target": "startDate assignable"
-      )
-    end
-
-    def finish_date_value
-      model.finish_date_before_type_cast
-    end
-
-    def finish_date_data
-      datepicker_attributes[:data].merge(
-        "overview--project-life-cycles-form-target": "finishDate assignable"
-      )
-    end
-
-    def show_finish_date_clear_button?
-      finish_date_value.present?
+    def placeholder
+      helpers.browser.device.mobile? ? "yyyy-mm-dd" : nil
     end
   end
 end
