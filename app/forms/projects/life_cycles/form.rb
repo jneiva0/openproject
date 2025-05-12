@@ -55,7 +55,7 @@ module Projects::LifeCycles
         clear_button_id: "#{field_name}_clear_button",
         inset: true,
         data: {
-          action: "focusin->overview--project-life-cycles-form#onHighlightField " \
+          action: "focus->overview--project-life-cycles-form#onHighlightField " \
                   "overview--project-life-cycles-form#previewForm ",
           "overview--project-life-cycles-form-target": field_name.to_s.camelize(:lower)
         },

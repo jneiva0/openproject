@@ -128,7 +128,10 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
 
   preventValueMorphingActiveElement(event:CustomEvent<{ attributeName:string }>) {
     const target = event.target as HTMLInputElement;
-    if (target?.id === document.activeElement?.id && event.detail.attributeName === 'value') {
+    const { attributeName } = event.detail;
+    const isActiveElement = this.highlightedField && this.highlightedField.id === target?.id;
+
+    if (isActiveElement && ['value', 'class'].includes(attributeName)) {
       event.preventDefault();
     }
   }
