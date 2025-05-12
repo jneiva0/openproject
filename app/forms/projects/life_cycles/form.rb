@@ -55,34 +55,28 @@ module Projects::LifeCycles
     end
 
     def start_date_input(form)
-      data = datepicker_attributes[:data]
-      value = model.default_start_date || model.start_date_before_type_cast
-      disabled = model.default_start_date.present?
-      caption = disabled ? I18n.t("activerecord.attributes.project/phase.start_date_caption") : nil
       input_attributes = {
         name: :start_date,
         label: attribute_name(:start_date),
         autofocus: autofocus?(:start_date),
-        disabled:,
-        caption:,
-        value:,
-        data: data.merge("overview--project-life-cycles-form-target": "startDate assignable"),
-        show_clear_button: value.present? && !disabled,
+        disabled: start_date_disabled?,
+        caption: start_date_caption,
+        value: start_date_value,
+        data: start_date_data,
+        show_clear_button: show_start_date_clear_button?,
         clear_button_id: "start_date_clear_button"
       }
       form.text_field **datepicker_attributes, **input_attributes
     end
 
     def finish_date_input(form)
-      data = datepicker_attributes[:data]
-      value = model.finish_date_before_type_cast
       input_attributes = {
         name: :finish_date,
         label: attribute_name(:finish_date),
         autofocus: autofocus?(:finish_date),
-        value:,
-        data: data.merge("overview--project-life-cycles-form-target": "finishDate assignable"),
-        show_clear_button: value.present?,
+        value: finish_date_value,
+        data: finish_date_data,
+        show_clear_button: show_finish_date_clear_button?,
         clear_button_id: "finish_date_clear_button"
       }
       form.text_field **datepicker_attributes, **input_attributes
@@ -110,6 +104,42 @@ module Projects::LifeCycles
       when :finish_date
         !start_date_blank && model.finish_date.blank?
       end
+    end
+
+    def start_date_value
+      model.default_start_date || model.start_date_before_type_cast
+    end
+
+    def start_date_disabled?
+      model.default_start_date.present?
+    end
+
+    def start_date_caption
+      start_date_disabled? ? I18n.t("activerecord.attributes.project/phase.start_date_caption") : nil
+    end
+
+    def show_start_date_clear_button?
+      start_date_value.present? && !start_date_disabled?
+    end
+
+    def start_date_data
+      datepicker_attributes[:data].merge(
+        "overview--project-life-cycles-form-target": "startDate assignable"
+      )
+    end
+
+    def finish_date_value
+      model.finish_date_before_type_cast
+    end
+
+    def finish_date_data
+      datepicker_attributes[:data].merge(
+        "overview--project-life-cycles-form-target": "finishDate assignable"
+      )
+    end
+
+    def show_finish_date_clear_button?
+      finish_date_value.present?
     end
   end
 end
