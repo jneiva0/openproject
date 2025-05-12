@@ -45,12 +45,12 @@ module TimeEntries
       if show_work_package_field?
         f.work_package_autocompleter name: :entity_id,
                                      label: TimeEntry.human_attribute_name(:work_package),
-                                     required: work_package_required?,
+                                     required: entity_required?,
                                      validation_message: work_package_validation_error,
                                      autocomplete_options: {
                                        defaultData: false,
                                        component: "opce-time-entries-work-package-autocompleter",
-                                       hiddenFieldAction: "change->time-entry#workPackageChanged",
+                                       hiddenFieldAction: "change->time-entry#entityChanged",
                                        focusDirectly: false,
                                        append_to: "#time-entry-dialog",
                                        url: work_package_completer_url,
@@ -84,7 +84,7 @@ module TimeEntries
     #
     # We're still discussing if we make the work package mandatory, then this will become obsolete and
     # probably be removed.
-    def work_package_required?
+    def entity_required?
       model.project.blank?
     end
 

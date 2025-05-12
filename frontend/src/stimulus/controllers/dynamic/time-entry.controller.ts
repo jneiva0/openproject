@@ -55,7 +55,7 @@ export default class TimeEntryController extends Controller {
     this.turboRequests = context.services.turboRequests;
     this.pathHelper = context.services.pathHelperService;
 
-    const workPackageAutocompleter = document.querySelector('opce-autocompleter[data-input-name*="time_entry[work_package_id]"]');
+    const workPackageAutocompleter = document.querySelector('opce-autocompleter[data-input-name*="time_entry[entity_id]"]');
     if (workPackageAutocompleter) {
       this.oldWorkPackageId = (workPackageAutocompleter as HTMLElement).dataset.inputValue || '';
     }
@@ -69,7 +69,7 @@ export default class TimeEntryController extends Controller {
     );
   }
 
-  workPackageChanged(event:InputEvent) {
+  entityChanged(event:InputEvent) {
     const target = event.currentTarget as HTMLInputElement;
     const newValue = target.value;
 
