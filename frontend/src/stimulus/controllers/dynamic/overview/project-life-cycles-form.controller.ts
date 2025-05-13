@@ -106,6 +106,8 @@ export default class ProjectLifeCyclesFormController extends FormPreviewControll
         this.finishDateTarget.value = this.dateToIso(dates[0]);
         if (!this.startDateTarget.value) {
           this.highlightField(this.startDateTarget);
+        } else if (this.startDateTarget.value > this.finishDateTarget.value) {
+          this.startDateTarget.value = '';
         }
       } else {
         this.startDateTarget.value = this.dateToIso(dates[0]);
