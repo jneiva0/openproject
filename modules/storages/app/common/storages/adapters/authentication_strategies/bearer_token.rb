@@ -33,6 +33,7 @@ module Storages
     module AuthenticationStrategies
       class BearerToken < AuthenticationStrategy
         def initialize(token)
+          super()
           @token = token
         end
 

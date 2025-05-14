@@ -106,19 +106,17 @@ module Storages
       end
     end
 
+    # rubocop:disable Metrics/AbcSize
     def set_folder_permissions(remote_admins, project_storage)
-      system_user = [{ user_id: @storage.username, permissions: FILE_PERMISSIONS }]
-
       admin_permissions = remote_admins.to_set.map { |username| { user_id: username, permissions: FILE_PERMISSIONS } }
+      base_permissions = base_remote_permissions(admin_permissions)
 
       users_permissions = project_remote_identities(project_storage).map do |identity|
-        permissions = identity.user.all_permissions_for(project_storage.project) & FILE_PERMISSIONS
-        { user_id: identity.origin_user_id, permissions: }
+        { user_id: identity.origin_user_id,
+          permissions: identity.user.all_permissions_for(project_storage.project) & FILE_PERMISSIONS }
       end
 
-      group_permissions = [{ group_id: @storage.group, permissions: [] }]
-
-      permissions = system_user + admin_permissions + users_permissions + group_permissions
+      permissions = base_permissions + users_permissions
       project_folder_id = project_storage.project_folder_id
 
       input_data = build_set_permissions_input_data(project_folder_id, permissions).value_or do |failure|
@@ -128,6 +126,12 @@ module Storages
       @commands[:set_permissions].call(auth_strategy:, input_data:).or do |error|
         add_error(:set_folder_permission, error, options: { folder: project_folder_id })
       end
+    end
+    # rubocop:enable Metrics/AbcSize
+
+    def base_remote_permissions(admin_permissions)
+      [{ user_id: @storage.username, permissions: FILE_PERMISSIONS },
+       { group_id: @storage.group, permissions: [] }] + admin_permissions
     end
 
     def project_remote_identities(project_storage)

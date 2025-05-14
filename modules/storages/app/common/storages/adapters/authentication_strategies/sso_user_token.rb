@@ -33,6 +33,7 @@ module Storages
     module AuthenticationStrategies
       class SsoUserToken < AuthenticationStrategy
         def initialize(user)
+          super()
           @user = user
         end
 

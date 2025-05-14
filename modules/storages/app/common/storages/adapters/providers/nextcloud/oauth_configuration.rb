@@ -36,6 +36,7 @@ module Storages
           attr_reader :oauth_client
 
           def initialize(storage)
+            super()
             @storage = storage
             raise(ArgumentError, "Storage must have configured OAuth client credentials") if storage.oauth_client.blank?
 

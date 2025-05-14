@@ -42,6 +42,7 @@ module Storages
         @data = Adapters::Results::CopyTemplateFolder.new(id: nil, polling_url: nil, requires_polling: false)
       end
 
+      # rubocop:disable Metrics/PerceivedComplexity, Metrics/AbcSize
       def call(source, target)
         with_tagged_logger([self.class, source&.id, target&.id]) do
           return @result.map { @data } if non_managed_project_folder?(source)
@@ -55,6 +56,7 @@ module Storages
           )
         end
       end
+      # rubocop:enable Metrics/PerceivedComplexity, Metrics/AbcSize
 
       private
 
@@ -78,7 +80,7 @@ module Storages
             .resolve("#{storage}.commands.copy_template_folder")
             .call(auth_strategy: auth_strategy(storage), storage:, input_data:).alt_map do |failed|
             log_adapter_error(failed)
-            add_error(:base, failed, options: { destination_path:, source_path: }).fail!
+            add_error(:base, failed, options: { destination_path:, source_path: })
           end
         end
       end
