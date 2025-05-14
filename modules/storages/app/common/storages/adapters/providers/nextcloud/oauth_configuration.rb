@@ -43,8 +43,6 @@ module Storages
             @oauth_client = storage.oauth_client.freeze
           end
 
-          # rubocop:enable Lint/MissingSuper
-
           def to_httpx_oauth_config
             AuthenticationStrategies::OAuthConfiguration.new(
               client_id: @oauth_client.client_id,
