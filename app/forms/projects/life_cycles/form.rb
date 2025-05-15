@@ -68,7 +68,7 @@ module Projects::LifeCycles
     def start_date_input(form)
       input_attributes = {
         disabled: start_date_disabled?,
-        caption: start_date_caption,
+        caption: start_date_caption
       }
       form.text_field **datepicker_attributes(:start_date), **input_attributes
     end
