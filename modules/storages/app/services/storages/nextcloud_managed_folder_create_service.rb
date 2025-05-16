@@ -121,7 +121,10 @@ module Storages
 
       Adapters::Input::RenameFile.build(location:, new_name:).bind do |input_data|
         @commands[:rename_file].call(auth_strategy:, input_data:).alt_map do |error|
-          add_error(:rename_project_folder, error, options: input_data.to_h)
+          add_error(
+            :rename_project_folder, error,
+            options: { current_path: location, project_folder_name: new_name }
+          )
         end
       end
     end
