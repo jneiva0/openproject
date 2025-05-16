@@ -65,14 +65,13 @@ module Components
 
         def set_date_for(values:)
           dialog_selector = "##{Overviews::ProjectPhases::EditDialogComponent::DIALOG_ID}"
-
           datepicker = Components::RangeDatepicker.new(dialog_selector)
+
+          sleep 1
 
           values.each do |date|
             datepicker.set_date(date.strftime("%Y-%m-%d"))
-            # TODO: Use wait_for_form_preview_to_reload instead when the backdrop loading
-            # via turbo streams is fixed.
-            sleep 1 # Wait for the debounce from previewForm to complete
+            wait_for_form_preview_to_reload
           end
         end
 
@@ -97,7 +96,7 @@ module Components
         end
 
         def wait_for_form_preview_to_reload
-          expect(page).to have_css("form[aria-busy]")
+          expect(page).to have_css('form[aria-busy="true"]')
           expect(page).to have_no_css("form[aria-busy]")
         end
 
