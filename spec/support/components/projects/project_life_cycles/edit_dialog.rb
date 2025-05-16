@@ -52,9 +52,15 @@ module Components
         end
 
         def clear_dates
-          click_button("start_date_clear_button") if has_button?("start_date_clear_button")
-          click_button("finish_date_clear_button") if has_button?("finish_date_clear_button")
-          sleep 1 # Wait for the debounce from previewForm to complete
+          if has_button?("start_date_clear_button")
+            click_button("start_date_clear_button")
+            wait_for_form_preview_to_reload
+          end
+
+          if has_button?("finish_date_clear_button")
+            click_button("finish_date_clear_button")
+            wait_for_form_preview_to_reload
+          end
         end
 
         def set_date_for(values:)
@@ -64,8 +70,17 @@ module Components
 
           values.each do |date|
             datepicker.set_date(date.strftime("%Y-%m-%d"))
+            # TODO: Use wait_for_form_preview_to_reload instead when the backdrop loading
+            # via turbo streams is fixed.
             sleep 1 # Wait for the debounce from previewForm to complete
           end
+        end
+
+        def activate_field(field_name)
+          within_dialog do
+            find_field(field_name).click
+          end
+          expect_input(field_name, active: true)
         end
 
         def close
@@ -79,6 +94,11 @@ module Components
           within_dialog do
             click_link_or_button "Cancel"
           end
+        end
+
+        def wait_for_form_preview_to_reload
+          expect(page).to have_css("form[aria-busy]")
+          expect(page).to have_no_css("form[aria-busy]")
         end
 
         def submit
@@ -105,45 +125,37 @@ module Components
           end
         end
 
-        def expect_input(label, value:, disabled: false)
+        def expect_input(label, value: nil, disabled: false, active: false)
+          field_options = { disabled: }
+          field_options[:with] = value if value
+          field_options[:class] = "op-datepicker-modal--date-field_current" if active
+
           within_async_content do
-            expect(page).to have_field(label, with: value, disabled:)
+            expect(page).to have_field(label, **field_options)
             # Note: This capybara matcher has a bug and it raises an error, if the
-            # label, name and disabled flags are passed at once.
+            # label, name and disabled flags are passed at once:
             #
             # TypeError: no implicit conversion of XPath::Expression into Integer (TypeError)
             #   expression_filter(:disabled) { |xpath, val| val ? xpath : xpath[~XPath.attr(:disabled)] }
             # from ~/.rbenv/versions/3.4.2/lib/ruby/gems/3.4.0/gems/capybara-3.40.0/lib/capybara/selector.rb:448:in 'String#[]'
             expect(page).to have_field(
-              with: value,
               name: "project_phase[#{label.parameterize.underscore}]",
-              disabled:
+              **field_options
             )
           end
         end
 
-        def expect_validation_message(text: nil, present: true)
-          selector = 'div[id^="validation"]'
-          expect_selector_for(selector:, text:, present:)
-        end
-
-        def expect_no_validation_message
-          expect_validation_message(present: false)
-        end
-
-        private
-
-        def expect_selector_for(selector:, text: nil, present: true)
-          within_async_content do
-            input_id = "#project_phase_date_range"
-            parent = find(input_id).ancestor("primer-datepicker-field")
-
-            if present
-              expect(parent).to have_selector(selector, text:)
-            else
-              expect(parent).to have_no_selector(selector)
-            end
+        def expect_validation_message(field_name, text: nil, present: true)
+          parent = find_field(field_name).ancestor("primer-text-field")
+          if present
+            expect(parent).to have_css('div[id^="validation"]', text:)
+          else
+            expect(parent).to have_no_css('div[id^="validation"]')
           end
+        end
+
+        def expect_no_validation_message(field_name)
+          expect_validation_message(field_name, present: false)
         end
       end
     end

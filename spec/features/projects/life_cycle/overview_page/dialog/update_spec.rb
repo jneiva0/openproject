@@ -64,8 +64,9 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
       it "shows all the Project::Phases without a value" do
         project_life_cycles.each do |life_cycle|
           dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle)
+
           dialog.expect_title(life_cycle.name)
-          dialog.expect_input("Start date", value: "")
+          dialog.expect_input("Start date", value: "", disabled: false)
           dialog.expect_input("Finish date", value: "")
           dialog.expect_input("Duration", value: "", disabled: true)
 
@@ -77,6 +78,83 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
           overview_page.within_life_cycle_container(life_cycle) do
             expect(page).to have_text "-"
           end
+        end
+      end
+
+      describe "the datepicker interaction" do
+        # Start date is already defined in the included context
+        let(:finish_date) { start_date + 1.day }
+        let(:new_start_date) { start_date - 1.week }
+        let(:new_finish_date) { start_date }
+
+        it "interconnects the calendar with the date input fields" do
+          dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_initiating, wait_angular: true)
+
+          # Set date input fields by choosing a range in the calendar
+          dialog.set_date_for(values: [start_date, finish_date])
+
+          dialog.expect_input("Start date", value: start_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Finish date", value: finish_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Duration", value: 2, disabled: true)
+
+          # Set a new finish date by focusing the finish date field
+          dialog.activate_field("Finish date")
+          dialog.set_date_for(values: [new_finish_date])
+
+          dialog.expect_input("Start date", value: start_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"), active: true)
+          dialog.expect_input("Duration", value: 1, disabled: true)
+
+          # Set a new start date by focusing the start date field
+          dialog.activate_field("Start date")
+          dialog.set_date_for(values: [new_start_date])
+
+          dialog.expect_input("Start date", value: new_start_date.strftime("%Y-%m-%d"))
+          # Expect the finish date to be cleared and activated
+          dialog.expect_input("Finish date", value: "", active: true)
+          dialog.expect_input("Duration", value: "", disabled: true)
+
+          # Set the new finish date too
+          dialog.activate_field("Finish date")
+          dialog.set_date_for(values: [new_finish_date])
+
+          dialog.expect_input("Start date", value: new_start_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Duration", value: 8, disabled: true)
+
+          # Clearing the date fields by using the clear button
+          dialog.clear_dates
+
+          # Setting the finish date without a start date being present
+          dialog.activate_field("Finish date")
+          dialog.set_date_for(values: [new_finish_date])
+
+          # The empty start date is focused and the new finish date is filled in
+          dialog.expect_input("Start date", value: "", active: true)
+          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Duration", value: "", disabled: true)
+
+          # Filling the activated start date should complete the range
+          dialog.set_date_for(values: [new_start_date])
+
+          dialog.expect_input("Start date", value: new_start_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"))
+          dialog.expect_input("Duration", value: 8, disabled: true)
+
+          # Manually setting an inverse range should show an validation message
+          fill_in("Finish date", with: (new_start_date - 1.day).strftime("%Y-%m-%d"))
+            .send_keys(:tab)
+
+          dialog.expect_validation_message(
+            "Finish date",
+            text: "Finish date must be after the start date."
+          )
+
+          # Setting a correct range will clear the error message
+          fill_in("Finish date", with: new_finish_date.strftime("%Y-%m-%d"))
+            .send_keys(:tab)
+
+          dialog.expect_no_validation_message("Finish date")
         end
       end
     end
