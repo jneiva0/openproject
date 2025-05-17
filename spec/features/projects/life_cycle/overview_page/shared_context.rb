@@ -48,32 +48,45 @@ RSpec.shared_context "with seeded projects and phases" do
 
   let(:start_date) { Time.zone.today.next_week }
 
+  let(:initiating_start_date) { start_date }
+  let(:initiating_finish_date) { start_date + 1.day }
+  let(:initiating_duration) { 2 }
+  let(:planning_start_date) { start_date + 2.days }
+  let(:planning_finish_date) { start_date + 5.days }
+  let(:planning_duration) { 4 }
+  let(:executing_start_date) { start_date + 6.days }
+  let(:executing_finish_date) { start_date + 7.days }
+  let(:executing_duration) { 2 }
+  let(:closing_start_date) { start_date + 8.days }
+  let(:closing_finish_date) { start_date + 12.days }
+  let(:closing_duration) { 4 }
+
   let(:life_cycle_initiating) do
     create :project_phase,
            definition: life_cycle_initiating_definition,
-           start_date:,
-           finish_date: start_date + 1.day,
+           start_date: initiating_start_date,
+           finish_date: initiating_finish_date,
            project:
   end
   let(:life_cycle_planning) do
     create :project_phase,
            definition: life_cycle_planning_definition,
-           start_date: start_date + 2.days,
-           finish_date: start_date + 5.days,
+           start_date: planning_start_date,
+           finish_date: planning_finish_date,
            project:
   end
   let(:life_cycle_executing) do
     create :project_phase,
            definition: life_cycle_executing_definition,
-           start_date: start_date + 6.days,
-           finish_date: start_date + 7.days,
+           start_date: executing_start_date,
+           finish_date: executing_finish_date,
            project:
   end
   let(:life_cycle_closing) do
     create :project_phase,
            definition: life_cycle_closing_definition,
-           start_date: start_date + 8.days,
-           finish_date: start_date + 12.days,
+           start_date: closing_start_date,
+           finish_date: closing_finish_date,
            project:
   end
 

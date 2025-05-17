@@ -126,7 +126,9 @@ module Components
 
         def expect_input(label, value: nil, disabled: false, active: false)
           field_options = { disabled: }
-          field_options[:with] = value if value
+          if value
+            field_options[:with] = value.respond_to?(:strftime) ? value.strftime("%Y-%m-%d") : value
+          end
           field_options[:class] = "op-datepicker-modal--date-field_current" if active
 
           within_async_content do

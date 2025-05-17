@@ -80,87 +80,10 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
           end
         end
       end
-
-      describe "the datepicker interaction" do
-        # Start date is already defined in the included context
-        let(:finish_date) { start_date + 1.day }
-        let(:new_start_date) { start_date - 1.week }
-        let(:new_finish_date) { start_date }
-
-        it "interconnects the calendar with the date input fields" do
-          dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_initiating, wait_angular: true)
-
-          # Set date input fields by choosing a range in the calendar
-          dialog.set_date_for(values: [start_date, finish_date])
-
-          dialog.expect_input("Start date", value: start_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Finish date", value: finish_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Duration", value: 2, disabled: true)
-
-          # Set a new finish date by focusing the finish date field
-          dialog.activate_field("Finish date")
-          dialog.set_date_for(values: [new_finish_date])
-
-          dialog.expect_input("Start date", value: start_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"), active: true)
-          dialog.expect_input("Duration", value: 1, disabled: true)
-
-          # Set a new start date by focusing the start date field
-          dialog.activate_field("Start date")
-          dialog.set_date_for(values: [new_start_date])
-
-          dialog.expect_input("Start date", value: new_start_date.strftime("%Y-%m-%d"))
-          # Expect the finish date to be cleared and activated
-          dialog.expect_input("Finish date", value: "", active: true)
-          dialog.expect_input("Duration", value: "", disabled: true)
-
-          # Set the new finish date too
-          dialog.activate_field("Finish date")
-          dialog.set_date_for(values: [new_finish_date])
-
-          dialog.expect_input("Start date", value: new_start_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Duration", value: 8, disabled: true)
-
-          # Clearing the date fields by using the clear button
-          dialog.clear_dates
-
-          # Setting the finish date without a start date being present
-          dialog.activate_field("Finish date")
-          dialog.set_date_for(values: [new_finish_date])
-
-          # The empty start date is focused and the new finish date is filled in
-          dialog.expect_input("Start date", value: "", active: true)
-          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Duration", value: "", disabled: true)
-
-          # Filling the activated start date should complete the range
-          dialog.set_date_for(values: [new_start_date])
-
-          dialog.expect_input("Start date", value: new_start_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Finish date", value: new_finish_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Duration", value: 8, disabled: true)
-
-          # Manually setting an inverse range should show an validation message
-          fill_in("Finish date", with: (new_start_date - 1.day).strftime("%Y-%m-%d"))
-            .send_keys(:tab)
-
-          dialog.expect_validation_message(
-            "Finish date",
-            text: "Finish date must be after the start date."
-          )
-
-          # Setting a correct range will clear the error message
-          fill_in("Finish date", with: new_finish_date.strftime("%Y-%m-%d"))
-            .send_keys(:tab)
-
-          dialog.expect_no_validation_message("Finish date")
-        end
-      end
     end
 
-    context "when all LifeCycleSteps have a value" do
-      it "shows all the Project::Phases and updates them correctly" do
+    context "when all Project::Phase have dates set" do
+      it "shows and updates them correctly" do
         life_cycle_initiating_was = life_cycle_initiating.dup
         life_cycle_planning_was = life_cycle_planning.dup
         life_cycle_executing_was = life_cycle_executing.dup
@@ -169,15 +92,13 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
         # Set a value for life_cycle_initiating
         dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_initiating, wait_angular: true)
 
-        life_cycle_initiating.tap do |step|
-          dialog.expect_input("Start date", value: step.start_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Finish date", value: step.finish_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Duration", value: step.duration, disabled: true)
-        end
+        dialog.expect_input("Start date", value: initiating_start_date)
+        dialog.expect_input("Finish date", value: initiating_finish_date)
+        dialog.expect_input("Duration", value: initiating_duration, disabled: true)
 
         retry_block do
           # Retrying due to a race condition between filling the input vs submitting the form preview.
-          original_dates = [life_cycle_initiating.start_date, life_cycle_initiating.finish_date]
+          original_dates = [initiating_start_date, initiating_finish_date]
           dialog.set_date_for(values: original_dates)
 
           page.driver.clear_network_traffic
@@ -202,16 +123,28 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
           end
         end
 
-        # Clear the value of life_cycle_planning
+        # Open the life_cycle_planning dialog
+        expected_start_date = start_date + 1.day
+        expected_finish_date = expected_start_date + planning_duration - 1.day
         dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_planning, wait_angular: true)
 
-        life_cycle_planning.tap do |step|
-          dialog.expect_input("Start date", value: step.start_date.strftime("%Y-%m-%d"), disabled: true)
-          dialog.expect_input("Finish date", value: step.finish_date.strftime("%Y-%m-%d"))
-          dialog.expect_input("Duration", value: step.duration, disabled: true)
-        end
+        dialog.expect_input("Start date", value: expected_start_date, disabled: true)
+        dialog.expect_input("Finish date", value: expected_finish_date)
+        dialog.expect_input("Duration", value: planning_duration, disabled: true)
 
+        # Set invalid range (finish date before start date) via input field
+        fill_in("Finish date", with: (expected_start_date - 1.day).strftime("%Y-%m-%d"))
+          .send_keys(:tab)
+
+        dialog.expect_validation_message(
+          "Finish date",
+          text: "Finish date must be after the start date."
+        )
+
+        # Clear the value of life_cycle_planning
         dialog.clear_dates
+
+        dialog.expect_no_validation_message("Finish date")
 
         # Saving the dialog is successful
         dialog.submit
@@ -260,6 +193,105 @@ RSpec.describe "Edit project phases on project overview page", :js, with_flag: {
                                         "#{I18n.l life_cycle_closing_was.finish_date} to " \
                                         "#{I18n.l life_cycle_closing.start_date} - " \
                                         "#{I18n.l life_cycle_closing.finish_date}")
+        end
+      end
+
+      describe "the datepicker interaction" do
+        let(:new_start_date) { start_date - 1.week }
+        let(:new_finish_date) { start_date }
+
+        it "interconnects the calendar with the date input fields" do
+          # Opening the first phase
+          dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_initiating, wait_angular: true)
+
+          dialog.expect_input("Start date", value: initiating_start_date)
+          dialog.expect_input("Finish date", value: initiating_finish_date)
+          dialog.expect_input("Duration", value: 2, disabled: true)
+
+          # Update only finish date via calendar (with finish date field active)
+          dialog.activate_field("Finish date")
+          dialog.set_date_for(values: [new_finish_date])
+
+          dialog.expect_input("Start date", value: initiating_start_date)
+          dialog.expect_input("Finish date", value: new_finish_date, active: true)
+          dialog.expect_input("Duration", value: 1, disabled: true)
+
+          # Update start date via calendar (with start date field active)
+          dialog.activate_field("Start date")
+          dialog.set_date_for(values: [new_start_date])
+
+          dialog.expect_input("Start date", value: new_start_date)
+          dialog.expect_input("Finish date", value: "", active: true) # finish date cleared and activated
+          dialog.expect_input("Duration", value: "", disabled: true)
+
+          # Set finish date again via calendar
+          dialog.activate_field("Finish date")
+          dialog.set_date_for(values: [new_finish_date])
+
+          dialog.expect_input("Start date", value: new_start_date)
+          dialog.expect_input("Finish date", value: new_finish_date)
+          dialog.expect_input("Duration", value: 8, disabled: true)
+
+          # Clear both date fields via clear buttons
+          dialog.clear_dates
+
+          # Set finish date with empty start date via calendar
+          dialog.activate_field("Finish date")
+          dialog.set_date_for(values: [new_finish_date])
+
+          # The empty start date is focused and the new finish date is filled in
+          dialog.expect_input("Start date", value: "", active: true)
+          dialog.expect_input("Finish date", value: new_finish_date)
+          dialog.expect_input("Duration", value: "", disabled: true)
+
+          # Complete range by setting start date via the calendar
+          dialog.set_date_for(values: [new_start_date])
+
+          dialog.expect_input("Start date", value: new_start_date)
+          dialog.expect_input("Finish date", value: new_finish_date)
+          dialog.expect_input("Duration", value: 8, disabled: true)
+        end
+      end
+    end
+
+    context "when only the first Project::Phase has dates set" do
+      it "shows updates the following Project::Phase correctly" do
+        # Opening the second phase with no dates
+        life_cycle_planning.update!(start_date: nil, finish_date: nil, duration: nil)
+        dialog = overview_page.open_edit_dialog_for_life_cycle(life_cycle_planning, wait_angular: true)
+
+        # The start date automatically succeeds the life_cycle_initiating
+        initiating_finish_date_succesor = initiating_finish_date + 1.day
+
+        dialog.expect_input("Start date", value: initiating_finish_date_succesor, disabled: true)
+        dialog.expect_input("Finish date", value: "")
+        dialog.expect_input("Duration", value: "", disabled: true)
+
+        retry_block do
+          # Set invalid range (finish date before start date) via input field
+          fill_in("Finish date", with: initiating_finish_date.strftime("%Y-%m-%d"))
+            .send_keys(:tab)
+
+          dialog.expect_validation_message(
+            "Finish date",
+            text: "Finish date must be after the start date."
+          )
+        end
+
+        # Correct the finish date to clear validation via the datepicker
+        dialog.set_date_for(values: [planning_finish_date])
+
+        dialog.expect_input("Start date", value: initiating_finish_date_succesor, disabled: true)
+        dialog.expect_input("Finish date", value: planning_finish_date)
+        dialog.expect_input("Duration", value: planning_duration, disabled: true)
+
+        dialog.submit # Saving the dialog is successful
+        dialog.expect_closed
+
+        # Sidebar shows the refreshed life_cycle_planning
+        life_cycle_planning.reload
+        overview_page.within_life_cycle_container(life_cycle_planning) do
+          expect(page).to have_text formatted_date_range(life_cycle_planning)
         end
       end
     end
