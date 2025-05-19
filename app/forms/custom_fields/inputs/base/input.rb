@@ -46,7 +46,7 @@ class CustomFields::Inputs::Base::Input < ApplicationForm
       {
         data: { "qa-field-name": qa_field_name },
         value:,
-        label_arguments: { classes: "FormControl-label--withHelpText2" }
+        label_arguments: { classes: "FormControl-label--withHelpText" }
       }
     )
     attrs[:label] = helpers.safe_join([attrs[:label], " ", attribute_help_text(attribute_name, @object.model_name)])

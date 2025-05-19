@@ -28,36 +28,43 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-class ApplicationForm < Primer::Forms::Base
-  def self.settings_form
-    form do |f|
-      f = Settings::FormDecorator.new(f)
-      yield f
+# Decorates a form object to provide a more convenient interface for
+# rendering attribute help texts.
+#
+# It automatically sets the label property.
+module AttributeHelpTexts
+  class FormDecorator
+    include FormHelper
+
+    attr_reader :form
+
+    # Initializes a new AttributeHelpTexts::FormDecorator
+    #
+    # @param form [Object] The form object to be decorated
+    def initialize(form)
+      @form = form
     end
-  end
 
-  def self.form_with_attribute_help_texts
-    form do |f|
-      yield AttributeHelpTexts::FormDecorator.new(f)
+    def method_missing(method, ...)
+      form.send(method, ...)
     end
-  end
 
-  def url_helpers
-    Rails.application.routes.url_helpers
-  end
+    def respond_to_missing?(method, include_private = false)
+      form.respond_to?(method, include_private)
+    end
 
-  # @return [ActionView::Base] the view helper instance
-  delegate :helpers, to: :@view_context
-
-  # @return [ActiveRecord::Base] the model instance given to the form builder
-  def model
-    @builder.object
-  end
-
-  # @param field_name [Symbol] the name of the attribute for which to retrieve
-  #  the human-readable name
-  # @return [String] the human-readable name of the specified attribute
-  def attribute_name(field_name)
-    model.class.human_attribute_name(field_name)
+    # Creates a text field input for a setting.
+    #
+    #
+    # @param name [Symbol] The name of the setting
+    # @param options [Hash] Additional options for the text field
+    # @return [Object] The text field input
+    def text_field(name:, **options)
+      # model_name = options[:builder]
+      options.reverse_merge!(
+        label: "#{form}"
+      )
+      form.text_field(name:, **options)
+    end
   end
 end

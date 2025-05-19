@@ -44,6 +44,17 @@ module Primer
           def work_package_autocompleter(**, &)
             add_input WorkPackageAutocompleterInput.new(builder:, form:, **, &)
           end
+
+          def decorate_options(attribute_help_text: false, **options)
+            if attribute_help_text
+              model_name = builder.object.model_name
+
+              options[:label] ||= "name: #{model_name}"
+              options[:label_arguments] ||= {}
+              options[:label_arguments][:classes] = "FormControl-label--withHelpText"
+            end
+            options
+          end
         end
       end
     end

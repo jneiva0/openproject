@@ -28,36 +28,16 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-class ApplicationForm < Primer::Forms::Base
-  def self.settings_form
-    form do |f|
-      f = Settings::FormDecorator.new(f)
-      yield f
+module Projects
+  class UpdateEditAttributesContract < UpdateContract
+    def valid?(context = contract_validation_context) = super
+
+    def writable_attributes = super.grep_v(/^custom_field_/)
+
+    private
+
+    def contract_validation_context
+      :update
     end
-  end
-
-  def self.form_with_attribute_help_texts
-    form do |f|
-      yield AttributeHelpTexts::FormDecorator.new(f)
-    end
-  end
-
-  def url_helpers
-    Rails.application.routes.url_helpers
-  end
-
-  # @return [ActionView::Base] the view helper instance
-  delegate :helpers, to: :@view_context
-
-  # @return [ActiveRecord::Base] the model instance given to the form builder
-  def model
-    @builder.object
-  end
-
-  # @param field_name [Symbol] the name of the attribute for which to retrieve
-  #  the human-readable name
-  # @return [String] the human-readable name of the specified attribute
-  def attribute_name(field_name)
-    model.class.human_attribute_name(field_name)
   end
 end
