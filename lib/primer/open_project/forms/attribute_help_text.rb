@@ -33,11 +33,13 @@ module Primer
     module Forms
       # :nodoc:
       class AttributeHelpText < Primer::Forms::BaseComponent
-        include AngularHelper
-
         def initialize(attribute:, attribute_scope:)
           super()
-          @inputs = { attribute:, attribute_scope: }
+
+          @angular_component = OpPrimer::AngularComponent.new(
+            tag: "opce-attribute-help-text",
+            inputs: { attribute:, attribute_scope: }
+          )
         end
       end
     end
