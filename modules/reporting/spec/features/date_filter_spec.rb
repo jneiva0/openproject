@@ -34,9 +34,11 @@ require "spec_helper"
 RSpec.describe "Cost report date filter", :js do
   let(:project) { create(:project) }
 
-  let!(:today_time_entry) { create(:time_entry, project: project, hours: 5) }
-  let!(:five_days_ago_time_entry) { create(:time_entry, project: project, hours: 10, spent_on: 5.days.ago) }
-  let!(:five_days_from_now_time_entry) { create(:time_entry, project: project, hours: 15, spent_on: 5.days.from_now) }
+  let(:work_package) { create(:work_package, project:) }
+
+  let!(:today_time_entry) { create(:time_entry, entity: work_package, hours: 5) }
+  let!(:five_days_ago_time_entry) { create(:time_entry, entity: work_package, hours: 10, spent_on: 5.days.ago) }
+  let!(:five_days_from_now_time_entry) { create(:time_entry, entity: work_package, hours: 15, spent_on: 5.days.from_now) }
 
   current_user { create(:admin) }
 

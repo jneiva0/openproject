@@ -119,6 +119,12 @@ module ReportingHelper
       budget_link value
     when :work_package_id
       link_to_work_package(WorkPackage.find(value.to_i))
+    when :entity_id # rubocop:disable Lint/DuplicateBranch
+      # TODO: Add ability to use other resources here as well
+      link_to_work_package(WorkPackage.find(value.to_i))
+    when :entity_type
+      # TODO: Skip for now
+      nil
     when :spent_on
       format_date(value.to_date)
     when :type_id
@@ -177,8 +183,8 @@ module ReportingHelper
     return "" if value.blank?
 
     case key.to_sym
-    when :work_package_id, :tweek, :tmonth, :week  then value.to_i
-    when :spent_on                                 then value.to_date.mjd
+    when :work_package_id, :entity_id, :tweek, :tmonth, :week then value.to_i
+    when :spent_on then value.to_date.mjd
     else strip_tags(field_representation_map(key, value))
     end
   end

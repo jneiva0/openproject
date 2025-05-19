@@ -29,7 +29,7 @@
 class Widget::Table::EntryTable < Widget::Table
   include ReportingHelper
 
-  FIELDS = %i[user_id activity_id work_package_id comments logged_by_id project_id].freeze
+  FIELDS = %i[user_id activity_id entity_id comments logged_by_id project_id].freeze
 
   def render
     content = content_tag :div, class: "generic-table--container -with-footer" do
