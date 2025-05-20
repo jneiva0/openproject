@@ -52,7 +52,7 @@ FactoryBot.define do
     trait :token_exchange_capable do
       callback(:after_build) do |provider|
         provider.options["grant_types_supported"] ||= []
-        provider.options["grant_types_supported"] << OpenIDConnect::Provider::TOKEN_EXCHANGE_GRANT_TYPE
+        provider.options["grant_types_supported"] << OpenProject::OpenIDConnect::TOKEN_EXCHANGE_GRANT_TYPE
       end
     end
   end

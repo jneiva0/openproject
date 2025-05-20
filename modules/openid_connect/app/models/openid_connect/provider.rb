@@ -34,8 +34,6 @@ module OpenIDConnect
 
     has_many :remote_identities, as: :auth_source, dependent: :destroy
 
-    TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange"
-
     OIDC_PROVIDERS = %w[google microsoft_entra custom].freeze
     DISCOVERABLE_STRING_ATTRIBUTES_MANDATORY = %i[authorization_endpoint
                                                   userinfo_endpoint
@@ -118,7 +116,7 @@ module OpenIDConnect
     def token_exchange_capable?
       return false if grant_types_supported.blank?
 
-      grant_types_supported.include?(TOKEN_EXCHANGE_GRANT_TYPE)
+      grant_types_supported.include?(OpenProject::OpenIDConnect::TOKEN_EXCHANGE_GRANT_TYPE)
     end
 
     def icon

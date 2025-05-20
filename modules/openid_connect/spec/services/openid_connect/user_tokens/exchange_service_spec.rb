@@ -57,7 +57,7 @@ RSpec.describe OpenIDConnect::UserTokens::ExchangeService, :webmock do
     user.oidc_user_tokens.create!(access_token: idp_access_token, audiences: [OpenIDConnect::UserToken::IDP_AUDIENCE])
     user.oidc_user_tokens.create!(access_token:, refresh_token:, audiences: [existing_audience])
     stub_request(:post, provider.token_endpoint)
-      .with(body: hash_including(grant_type: OpenIDConnect::Provider::TOKEN_EXCHANGE_GRANT_TYPE))
+      .with(body: hash_including(grant_type: OpenProject::OpenIDConnect::TOKEN_EXCHANGE_GRANT_TYPE))
       .to_return(**exchange_response)
   end
 
@@ -79,10 +79,15 @@ RSpec.describe OpenIDConnect::UserTokens::ExchangeService, :webmock do
       expect(result.value!).to eq(user.oidc_user_tokens.last)
     end
 
-    it "used the IDP access token to perform the exchange" do
+    it "performs the exchange with expected parameters" do
       subject
       expect(WebMock).to have_requested(:post, provider.token_endpoint)
-        .with(body: hash_including(subject_token: idp_access_token))
+        .with(body: {
+                grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+                subject_token: idp_access_token,
+                subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+                audience:
+              })
     end
 
     context "when the response has no expires_in" do

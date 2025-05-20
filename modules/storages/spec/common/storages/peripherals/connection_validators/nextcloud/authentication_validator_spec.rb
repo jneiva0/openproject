@@ -178,12 +178,13 @@ module Storages
 
                 context "when the server supports token exchange" do
                   let(:oidc_provider) { create(:oidc_provider, :token_exchange_capable, scope: "offline_access") }
-                  let(:exchangeable_token) { create(:oidc_user_token, user:, refresh_token: nil) }
+                  let!(:exchangeable_token) { create(:oidc_user_token, user:, refresh_token: nil) }
 
                   it "favors token exchange when refreshing" do
                     exchange_request = stub_request(:post, oidc_provider.token_endpoint)
-                                         .with(body: { audience: storage.audience, subject_token: exchangeable_token.access_token,
-                                                       grant_type: OpenIDConnect::Provider::TOKEN_EXCHANGE_GRANT_TYPE })
+                                         .with(body: hash_including(
+                                           grant_type: OpenProject::OpenIDConnect::TOKEN_EXCHANGE_GRANT_TYPE
+                                         ))
                                          .and_return_json(status: 200, body: { access_token: "NEW_TOKEN" })
 
                     expect(validator.call).to be_success
@@ -192,8 +193,9 @@ module Storages
 
                   it "fails if the exchange is met with an unexpected body" do
                     exchange_request = stub_request(:post, oidc_provider.token_endpoint)
-                                         .with(body: { audience: storage.audience, subject_token: exchangeable_token.access_token,
-                                                       grant_type: OpenIDConnect::Provider::TOKEN_EXCHANGE_GRANT_TYPE })
+                                         .with(body: hash_including(
+                                           grant_type: OpenProject::OpenIDConnect::TOKEN_EXCHANGE_GRANT_TYPE
+                                         ))
                                          .and_return_json(status: 200, body: { error: "failed " })
 
                     result = validator.call
@@ -205,8 +207,9 @@ module Storages
 
                   it "fails if the exchange fails" do
                     exchange_request = stub_request(:post, oidc_provider.token_endpoint)
-                                         .with(body: { audience: storage.audience, subject_token: exchangeable_token.access_token,
-                                                       grant_type: OpenIDConnect::Provider::TOKEN_EXCHANGE_GRANT_TYPE })
+                                         .with(body: hash_including(
+                                           grant_type: OpenProject::OpenIDConnect::TOKEN_EXCHANGE_GRANT_TYPE
+                                         ))
                                          .and_return(status: 401)
 
                     result = validator.call
