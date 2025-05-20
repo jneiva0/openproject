@@ -3,7 +3,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/opf/openproject)
 ![GitHub branch checks state](https://img.shields.io/github/checks-status/opf/openproject/dev)
 [![Github Tests](https://github.com/opf/openproject/actions/workflows/test-core.yml/badge.svg?branch=dev)](https://github.com/opf/openproject/actions/workflows/test-core.yml)
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jneiva0/openproject)
 **We empower teams to achieve great things together for the good of society.**
 
 OpenProject is a web-based project management software. Use OpenProject to manage your projects, tasks and goals. Collaborate via work packages and link them to your pull requests on Github. [Read more about the OpenProject GitHub integration](https://www.openproject.org/docs/system-admin-guide/integrations/github-integration/).
