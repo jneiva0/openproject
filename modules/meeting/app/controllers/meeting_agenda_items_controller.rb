@@ -166,7 +166,11 @@ class MeetingAgendaItemsController < ApplicationController
         update_header_component_via_turbo_stream
         update_sidebar_details_component_via_turbo_stream
         remove_item_via_turbo_stream(clear_slate: @meeting.agenda_items.empty?)
-        update_section_header_via_turbo_stream(meeting_section: section) if section&.reload.present?
+
+        # If section is deleted via an after_destroy/after_update action, it needs to be handled separately
+        if MeetingSection.exists?(section.id) && section&.reload.present?
+          update_section_header_via_turbo_stream(meeting_section: section)
+        end
       end
     else
       generic_call_failure_response(call)
