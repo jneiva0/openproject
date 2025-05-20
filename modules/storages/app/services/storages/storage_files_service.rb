@@ -35,20 +35,23 @@ module Storages
     end
 
     def call(user:, storage:, folder:)
-      auth_strategy = strategy(storage, user)
+      with_tagged_logger do
+        auth_strategy = strategy(storage, user)
 
-      info "Requesting all the files under folder #{folder} for #{storage.name}"
+        info "Requesting all the files under folder #{folder} for #{storage.name}"
+        info "auth_strategy: #{auth_strategy}"
 
-      input_data = Adapters::Input::Files.build(folder:).value_or do
-        return add_validation_error(it)
+        input_data = Adapters::Input::Files.build(folder:).value_or do
+          return add_validation_error(it)
+        end
+
+        files = Adapters::Registry.resolve("#{storage}.queries.files").call(storage:, auth_strategy:, input_data:).value_or do
+          return add_error(:base, it, options: { storage_name: storage.name, folder: })
+        end
+
+        @result.result = files
+        @result
       end
-
-      files = Adapters::Registry.resolve("#{storage}.queries.files").call(storage:, auth_strategy:, input_data:).value_or do
-        return add_error(:base, it, options: { storage_name: storage.name, folder: })
-      end
-
-      @result.result = files
-      @result
     end
 
     private

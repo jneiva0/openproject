@@ -56,15 +56,8 @@ module Storages
               case strategy.key
               when :basic_auth
                 Success(@storage.username)
-              when :oauth_user_token
-                remote_id = RemoteIdentity.of_user_and_client(strategy.user, @storage.oauth_client, @storage)
-                if remote_id.present?
-                  Success(remote_id.origin_user_id)
-                else
-                  Failure(
-                    error.with(payload: "No origin user ID or user token found. Cannot execute query without user context.")
-                  )
-                end
+              when :oauth_user_token, :sso_user_token
+                fetch_remote_identity(strategy.user, strategy.key)
               else
                 Failure(
                   error.with(
@@ -72,6 +65,17 @@ module Storages
                   )
                 )
               end
+            end
+          end
+
+          def fetch_remote_identity(user, auth_key)
+            integration = auth_key == :sso_user_token ? user.authentication_provider : @storage.oauth_client
+            remote_id = RemoteIdentity.of_user_and_client(user, integration, @storage)
+
+            if remote_id.present?
+              Success(remote_id.origin_user_id)
+            else
+              Failure(error.with(payload: "No origin user ID or user token found. Cannot execute query without user context."))
             end
           end
         end
